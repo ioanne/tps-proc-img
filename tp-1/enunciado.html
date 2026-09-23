@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TP 1 — Editor de Imágenes</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1d2330; --muted: #5f6b7a; --border: #e2e5ea; --soft: #f2f4f7;
+    --accent: #3b5bdb; --accent-soft: #e9edff; --warn: #a15c00; --warn-soft: #fff4e2;
+    --ok: #2b7a3b; --ok-soft: #e7f5ea; --code-bg: #f4f5f7;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --fg: #e5e8ee; --muted: #9aa4b3; --border: #2a303b; --soft: #1a1f28;
+      --accent: #7c96ff; --accent-soft: #212a47; --warn: #ffb057; --warn-soft: #33260f;
+      --ok: #6fd08a; --ok-soft: #173020; --code-bg: #1a1f28;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 Georgia, "Iowan Old Style", "Times New Roman", serif; }
+  h1, h2, h3, h4, nav, table, .tag, .callout strong, .caja, .meta { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .contenedor { display: grid; grid-template-columns: 230px minmax(0, 760px); gap: 48px; max-width: 1080px; margin: 0 auto; padding: 48px 24px 96px; }
+  @media (max-width: 900px) { .contenedor { grid-template-columns: 1fr; gap: 24px; } nav.indice { position: static !important; } }
+
+  nav.indice { position: sticky; top: 24px; align-self: start; font-size: 14px; }
+  nav.indice strong { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  nav.indice ol { margin: 0; padding-left: 20px; }
+  nav.indice li { margin: 3px 0; color: var(--muted); }
+  nav.indice a { color: var(--fg); text-decoration: none; }
+  nav.indice a:hover { color: var(--accent); }
+
+  header.portada { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 8px; }
+  .materia { font: 600 13px system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: 36px; line-height: 1.15; margin: 8px 0 12px; letter-spacing: -.01em; }
+  .bajada { font-size: 19px; color: var(--muted); margin: 0 0 20px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; color: var(--muted); }
+  .meta b { color: var(--fg); font-weight: 600; }
+
+  h2 { font-size: 24px; margin: 56px 0 12px; padding-top: 8px; letter-spacing: -.005em; }
+  h2 .n { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 18px; margin: 32px 0 8px; }
+  h4 { font-size: 15px; margin: 20px 0 6px; }
+  p, li { max-width: 70ch; }
+  a { color: var(--accent); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre { font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .c { color: var(--muted); }
+
+  .tabla { overflow-x: auto; margin: 16px 0; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 20px 0; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.ok { border-color: var(--ok); background: var(--ok-soft); }
+  .callout strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .callout p { margin: 4px 0; }
+
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--soft); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .tag.dado { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .tag.hacer { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+
+  .capas { display: flex; flex-direction: column; gap: 6px; margin: 20px 0; }
+  .caja { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: var(--soft); font-size: 14px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .caja b { font-weight: 600; }
+  .caja.core { border: 2px solid var(--warn); background: var(--warn-soft); }
+  .caja span { color: var(--muted); }
+  .flecha { text-align: center; color: var(--muted); font: 13px system-ui, sans-serif; }
+  .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  @media (max-width: 560px) { .fila { grid-template-columns: 1fr; } }
+
+  ol.hitos li { margin-bottom: 6px; }
+  footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+  @media print { nav.indice { display: none; } .contenedor { display: block; } body { font-size: 12pt; } }
+</style>
+</head>
+<body>
+<div class="contenedor">
+
+<nav class="indice" aria-label="Índice">
+  <strong>Contenido</strong>
+  <ol>
+    <li><a href="#objetivo">Objetivo</a></li>
+    <li><a href="#codigo-base">Código base</a></li>
+    <li><a href="#arquitectura">Arquitectura</a></li>
+    <li><a href="#funcionales">Requisitos funcionales</a></li>
+    <li><a href="#operaciones">Las 10 operaciones</a></li>
+    <li><a href="#contrato">Contrato de la API</a></li>
+    <li><a href="#diseno">Diseño con clases</a></li>
+    <li><a href="#persistencia">Persistencia</a></li>
+    <li><a href="#tests">Tests</a></li>
+    <li><a href="#entrega">Entrega</a></li>
+    <li><a href="#ia">Uso de IA</a></li>
+    <li><a href="#evaluacion">Evaluación</a></li>
+    <li><a href="#extras">Extras</a></li>
+    <li><a href="#faq">Preguntas frecuentes</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="portada">
+  <div class="materia">Trabajo Práctico N.º 1 · Procesamiento de imágenes</div>
+  <h1>Editor de imágenes con Pillow y OpenCV</h1>
+  <p class="bajada">Implementar, con programación orientada a objetos, el núcleo de un servicio web que recibe imágenes, les aplica diez ediciones y guarda los resultados.</p>
+  <div class="meta">
+    <span><b>Modalidad:</b> en equipos</span>
+    <span><b>Stack:</b> Python · FastAPI · SQLAlchemy · Pillow · OpenCV</span>
+    <span><b>Entrega:</b> 24/09/2026</span>
+  </div>
+</header>
+
+<!-- ===================================================================== -->
+<h2 id="objetivo"><span class="n">1</span>Objetivo</h2>
+<p>Se entrega una aplicación web con el <strong>frontend terminado</strong> y un <strong>backend con toda la API armada</strong>: endpoints, modelo ORM, consultas a la base, manejo de archivos en disco, excepciones de dominio y el servicio que coordina cada caso de uso. Lo que falta es el <strong>procesamiento de imágenes</strong>: abrir, validar y codificar imágenes con Pillow, y las diez operaciones de edición con Pillow y OpenCV. Mientras no estén, esas partes responden <code>501 Not Implemented</code>. El trabajo de cada equipo es escribir esas clases.</p>
+<p>Al terminar, el frontend tiene que funcionar de punta a punta sin haber tocado una sola línea de su código: subir una imagen, verla en la galería, aplicarle cualquiera de las diez ediciones, encadenar ediciones sobre el resultado, descargarla y eliminarla.</p>
+<p>Los objetivos de aprendizaje son:</p>
+<ul>
+  <li>Manipular imágenes con Pillow y OpenCV, y entender la representación de cada librería (objetos <code>PIL.Image</code> vs. arreglos <code>numpy</code> en BGR).</li>
+  <li>Diseñar una solución orientada a objetos: abstracción, herencia, polimorfismo, encapsulamiento y separación de responsabilidades.</li>
+  <li>Construir una API REST con FastAPI respetando un contrato ya definido.</li>
+  <li>Persistir metadatos en una base de datos, guardando los archivos en disco y registrando <em>su URL</em> (no el binario) en la tabla.</li>
+  <li>Escribir tests automatizados.</li>
+</ul>
+
+<!-- ===================================================================== -->
+<h2 id="codigo-base"><span class="n">2</span>Código base</h2>
+<pre><code>tp-1/
+├── enunciado.html            <span class="c">este documento</span>
+├── frontend/                 <span class="tag dado">dado · no modificar</span>
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+└── backend/
+    ├── requirements.txt
+    ├── app/
+    │   ├── main.py           <span class="tag dado">dado</span>  <span class="c">app FastAPI, CORS, archivos estáticos</span>
+    │   ├── config.py         <span class="tag dado">dado</span>  <span class="c">carpeta de imágenes, URL de la base, formatos, límite</span>
+    │   ├── database.py       <span class="tag dado">dado</span>  <span class="c">engine, sesión, Base declarativa, get_db()</span>
+    │   ├── schemas.py        <span class="tag dado">dado · no modificar</span>  <span class="c">contrato de entrada/salida</span>
+    │   ├── models.py         <span class="tag dado">dado</span>  <span class="c">modelo ORM ImageRecord (tabla images)</span>
+    │   ├── dal.py            <span class="tag dado">dado</span>  <span class="c">ImageDAL: todas las consultas SQL (crear, obtener, listar, editar, borrar)</span>
+    │   ├── errors.py         <span class="tag dado">dado</span>  <span class="c">exception handler: excepción de dominio → HTTP</span>
+    │   ├── dependencies.py   <span class="tag dado">dado</span>  <span class="c">arma el ImageService de cada request</span>
+    │   ├── routers/
+    │   │   ├── images.py     <span class="tag dado">dado</span>  <span class="c">4 endpoints, delegan en el servicio</span>
+    │   │   └── operations.py <span class="tag dado">dado</span>  <span class="c">10 endpoints, construyen la operación y delegan</span>
+    │   └── core/
+    │       ├── exceptions.py <span class="tag dado">dado</span>  <span class="c">excepciones de dominio</span>
+    │       ├── storage.py    <span class="tag dado">dado</span>  <span class="c">lectura del upload en memoria y archivos en disco</span>
+    │       ├── service.py    <span class="tag dado">dado</span>  <span class="c">ImageService: los casos de uso</span>
+    │       ├── imaging.py    <span class="tag hacer">completar</span>  <span class="c">ImageCodec: bytes ↔ imagen con Pillow (inspect ya está dado)</span>
+    │       └── operations.py <span class="tag hacer">completar</span>  <span class="c">las 10 operaciones</span>
+    ├── tests/
+    │   ├── conftest.py       <span class="tag dado">dado · no modificar</span>
+    │   └── test_contract.py  <span class="tag dado">dado · no modificar</span>  <span class="c">tests de aceptación (153 casos)</span>
+    ├── pytest.ini
+    ├── storage/images/       <span class="c">acá se guardan los archivos</span>
+    └── data/                 <span class="c">acá se crea app.db (SQLite)</span></code></pre>
+
+<h3>Cómo levantarlo</h3>
+<pre><code>cd backend
+python -m venv .venv
+source .venv/bin/activate          <span class="c"># Windows: .venv\Scripts\activate</span>
+pip install -r requirements.txt
+uvicorn app.main:app --reload</code></pre>
+<p>Con el servidor corriendo:</p>
+<ul>
+  <li><a href="http://localhost:8765">http://localhost:8765</a>: frontend.</li>
+  <li><a href="http://localhost:8765/docs">http://localhost:8765/docs</a>: documentación interactiva de la API (Swagger), con todos los endpoints y sus schemas.</li>
+</ul>
+
+<div class="callout warn">
+  <strong>Estado inicial</strong>
+  <p>Todo funciona salvo el procesamiento de imágenes. Subir, listar, obtener y eliminar ya responden, pero al aplicar cualquiera de las diez ediciones el frontend muestra un aviso del estilo <em>“The feature 'Open image' has not been implemented yet.”</em> porque <code>ImageCodec.open</code>, <code>ImageCodec.encode</code> y las operaciones todavía no existen. El panel <strong>Actividad</strong> del frontend lista cada pedido HTTP con su código de respuesta, así que sirve para depurar.</p>
+  <p>Los tests de aceptación arrancan fallando: <code>pytest</code> da <em>121 failed, 32 passed</em>.</p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="arquitectura"><span class="n">3</span>Arquitectura</h2>
+<p>La aplicación se organiza en capas. Cada capa solo conoce a la de abajo.</p>
+
+<div class="capas" role="img" aria-label="Diagrama de capas: frontend, routers, core, y abajo almacenamiento en disco y base de datos">
+  <div class="caja"><b>Frontend</b><span>HTML + JS · dado</span></div>
+  <div class="flecha">HTTP / JSON ↓</div>
+  <div class="caja"><b>Routers FastAPI</b><span>reciben el request, validan con schemas, delegan y responden</span></div>
+  <div class="flecha">llamadas a métodos ↓</div>
+  <div class="caja"><b>Servicio (core)</b><span><code>ImageService</code> · coordina cada caso de uso · dado</span></div>
+  <div class="flecha">↓</div>
+  <div class="fila">
+    <div class="caja core"><b>Procesamiento (core, del equipo)</b><span><code>ImageCodec</code> y las 10 operaciones · Pillow / OpenCV</span></div>
+    <div class="caja"><b>Archivos (core)</b><span><code>FileStorage</code> · RAM ↔ <code>storage/images/</code> · dado</span></div>
+  </div>
+  <div class="caja"><b>DAL</b><span><code>ImageDAL</code> en <code>dal.py</code> · consultas a la tabla <code>images</code> · dado</span></div>
+</div>
+
+<div class="callout">
+  <strong>Regla de oro</strong>
+  <p>Cada cosa vive en un solo lugar:</p>
+  <ul>
+    <li><strong>Las consultas SQL</strong> van en <code>app/dal.py</code> y en ningún otro archivo.</li>
+    <li><strong>El manejo de archivos</strong> va 100&nbsp;% en el core: leer el upload a memoria, guardar los bytes en disco con un nombre único, armar la URL que se registra en la base, leer y borrar (<code>core/storage.py</code>).</li>
+    <li><strong>El procesamiento de imágenes</strong> (Pillow / OpenCV) va en el core: <code>core/imaging.py</code> y <code>core/operations.py</code>. Ni el servicio, ni el almacenamiento, ni el DAL saben qué es un píxel.</li>
+    <li><strong>Los endpoints</strong> solo reciben el request, le piden el trabajo al servicio y devuelven el resultado. No procesan imágenes, no tocan archivos y no consultan la base.</li>
+  </ul>
+  <p>El core <em>no</em> importa nada de FastAPI y tiene que poder usarse desde un script o un test sin levantar el servidor.</p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="funcionales"><span class="n">4</span>Requisitos funcionales</h2>
+
+<h3>RF1 · Subir imagen <code>POST /api/imagenes</code></h3>
+<p><em>Ya viene implementado (<code>ImageCodec.inspect</code> + <code>ImageService.upload</code>). Se describe para que sepan cómo se comporta.</em></p>
+<ul>
+  <li>Recibe el archivo como <code>multipart/form-data</code> en el campo <code>archivo</code>.</li>
+  <li>Acepta PNG, JPEG, WEBP y BMP (<code>config.FORMATOS_PERMITIDOS</code>). El formato se determina por el <strong>contenido</strong> del archivo, abriéndolo con Pillow, y no por la extensión ni por el <code>content-type</code>. Un PNG llamado <code>foto.jpg</code> es un PNG.</li>
+  <li>Las validaciones se hacen <strong>en este orden</strong>, y la primera que falla define la respuesta:
+    <ol>
+      <li>Supera <code>config.TAMANIO_MAXIMO_BYTES</code> (10 MB) → <code>413</code> <code>ARCHIVO_DEMASIADO_GRANDE</code>.</li>
+      <li>No se puede abrir como imagen (corrupto, vacío, texto…) → <code>400</code> <code>ARCHIVO_INVALIDO</code>.</li>
+      <li>Es una imagen válida pero de otro formato (GIF, TIFF…) → <code>400</code> <code>FORMATO_NO_SOPORTADO</code>.</li>
+    </ol>
+  </li>
+  <li>El archivo se guarda <strong>tal cual se recibió</strong> en <code>config.STORAGE_DIR</code>, con un <strong>nombre único</strong> generado por el backend (por ejemplo un UUID) y la extensión que corresponde a su formato. Nunca se usa el nombre que mandó el usuario como nombre de archivo.</li>
+  <li>Se registra en la base de datos su <strong>URL pública</strong> (<code>/media/&lt;nombre_archivo&gt;</code>) y sus metadatos. <code>tamanio_bytes</code> es el tamaño del archivo guardado. Responde <code>201</code> con un <a href="#contrato"><code>ImagenOut</code></a>.</li>
+</ul>
+
+<h3>RF2 · Listar imágenes <code>GET /api/imagenes</code></h3>
+<p>Devuelve todas las imágenes, originales y resultados, ordenadas por <code>id</code> descendente (la más nueva primero). Si no hay ninguna, devuelve <code>[]</code>.</p>
+
+<h3>RF3 · Obtener una imagen <code>GET /api/imagenes/{id}</code></h3>
+<p>Devuelve el <code>ImagenOut</code> de esa imagen, o <code>404</code> (<code>IMAGEN_NO_ENCONTRADA</code>) si no existe.</p>
+
+<h3>RF4 · Eliminar una imagen <code>DELETE /api/imagenes/{id}</code></h3>
+<ul>
+  <li>Borra el registro <strong>y</strong> el archivo del disco. Responde <code>204</code> sin cuerpo, o <code>404</code> si no existe.</li>
+  <li>Las imágenes derivadas de la eliminada <strong>no se borran</strong>: su <code>origen_id</code> pasa a <code>null</code>.</li>
+</ul>
+
+<h3>RF5 · Aplicar una edición <code>POST /api/imagenes/{id}/{operacion}</code></h3>
+<ul>
+  <li>Aplica la operación sobre la imagen <code>{id}</code> con los parámetros del cuerpo JSON.</li>
+  <li><strong>La imagen de origen nunca se modifica</strong>, ni su archivo ni su registro. El resultado es una imagen <em>nueva</em>, con su propio archivo y su propio registro, donde:
+    <ul>
+      <li><code>origen_id</code> es el id de la imagen de origen;</li>
+      <li><code>operacion</code> es el nombre de la ruta (<code>brillo</code>, <code>escala-grises</code>…);</li>
+      <li><code>parametros</code> es el cuerpo con los valores por defecto ya aplicados, es decir <code>params.model_dump()</code>. Por ejemplo, <code>{"ancho": 50}</code> se guarda como <code>{"ancho": 50, "alto": null, "mantener_proporcion": true}</code>. En <code>escala-grises</code> es <code>{}</code>;</li>
+      <li><code>nombre_original</code> se hereda del origen.</li>
+    </ul>
+  </li>
+  <li>El resultado se guarda en el <strong>mismo formato de archivo</strong> que el origen (un JPEG da un JPEG). Si el modo de color no se puede guardar en ese formato (por ejemplo RGBA en JPEG), se convierte antes de guardar.</li>
+  <li>Responde <code>201</code> con el <code>ImagenOut</code> del resultado. Si los parámetros violan una regla de dominio responde <code>400</code> (<code>PARAMETROS_INVALIDOS</code>); si la imagen no existe, <code>404</code> (<code>IMAGEN_NO_ENCONTRADA</code>). Los parámetros se validan <strong>antes</strong> de buscar la imagen, así que si fallan las dos cosas, gana el <code>400</code>.</li>
+  <li>Se puede aplicar una edición sobre un resultado (el frontend lo permite con el botón <em>“Seguir editando desde el resultado”</em>).</li>
+</ul>
+
+<h4>Modos de color</h4>
+<p>Todas las operaciones tienen que funcionar con cualquier imagen aceptada, sea cual sea su modo de color:</p>
+<ul>
+  <li>Las imágenes en modo <code>L</code> (grises), <code>RGB</code> y <code>RGBA</code> se procesan en su modo.</li>
+  <li>Cualquier otro modo (<code>P</code> con paleta, <code>LA</code>, <code>CMYK</code>…) se convierte antes de procesar: a <code>RGBA</code> si tiene transparencia y a <code>RGB</code> si no.</li>
+  <li>En una imagen <code>RGBA</code>, las operaciones de color (brillo, contraste, saturación, nitidez) <strong>no modifican el canal alfa</strong>.</li>
+  <li><code>escala-grises</code> y <code>bordes</code> siempre devuelven una imagen <code>L</code>, de un solo canal y sin alfa.</li>
+</ul>
+
+<!-- ===================================================================== -->
+<h2 id="operaciones"><span class="n">5</span>Las 10 operaciones</h2>
+<p>Los rangos de la tabla ya los valida FastAPI con los schemas de <code>schemas.py</code> (si no se cumplen, responde <code>422</code> automáticamente). La columna <em>Comportamiento esperado</em> es lo que verifican los tests de aceptación. Lo marcado como <strong>regla</strong> es una validación que tiene que hacer <strong>el core</strong> y que se responde con <code>400</code>.</p>
+<p>La columna <em>Sugerencia</em> es orientativa: cada equipo elige si usa Pillow u OpenCV en cada caso, pero el trabajo tiene que usar <strong>las dos librerías</strong> en al menos dos operaciones cada una.</p>
+
+<div class="tabla">
+<table>
+  <thead>
+    <tr><th>#</th><th>Endpoint</th><th>Cuerpo JSON (valor por defecto)</th><th>Comportamiento esperado</th><th>Sugerencia</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="num">1</td><td><code>/brillo</code></td><td><code>factor</code>: 0–3 (1.0)</td><td>0 → negro. 1.0 → sin cambios. 1.5 sobre gris 128 → ≈192.</td><td><code>ImageEnhance.Brightness</code></td></tr>
+    <tr><td class="num">2</td><td><code>/contraste</code></td><td><code>factor</code>: 0–3 (1.0)</td><td>0 → un único color uniforme (la luminancia media). 1.0 → sin cambios. &gt;1 separa claros y oscuros.</td><td><code>ImageEnhance.Contrast</code></td></tr>
+    <tr><td class="num">3</td><td><code>/saturacion</code></td><td><code>factor</code>: 0–3 (1.0)</td><td>0 → sin color (R = G = B), manteniendo los 3 canales. 1.0 → sin cambios.</td><td><code>ImageEnhance.Color</code> o espacio HSV</td></tr>
+    <tr><td class="num">4</td><td><code>/nitidez</code></td><td><code>factor</code>: 0–5 (1.0)</td><td>0 → suavizado. 1.0 → sin cambios. &gt;1 → realza detalles.</td><td><code>ImageEnhance.Sharpness</code></td></tr>
+    <tr><td class="num">5</td><td><code>/escala-grises</code></td><td><em>sin cuerpo</em></td><td>Resultado en modo <code>L</code>. Usa la luminancia <code>0.299 R + 0.587 G + 0.114 B</code> (rojo puro → 76).</td><td><code>cv2.cvtColor</code> / <code>ImageOps.grayscale</code></td></tr>
+    <tr><td class="num">6</td><td><code>/desenfoque</code></td><td><code>metodo</code>: <code>"gaussiano"</code> | <code>"mediana"</code> | <code>"promedio"</code> (gaussiano)<br><code>tamanio_kernel</code>: 1–51 (5)</td><td><strong>Regla:</strong> <code>tamanio_kernel</code> impar (1 es válido y no cambia nada). La mediana elimina píxeles aislados (“sal”).</td><td><code>cv2.GaussianBlur</code>, <code>cv2.medianBlur</code>, <code>cv2.blur</code></td></tr>
+    <tr><td class="num">7</td><td><code>/bordes</code></td><td><code>umbral_inferior</code>: 0–255 (100)<br><code>umbral_superior</code>: 0–255 (200)</td><td><strong>Regla:</strong> <code>umbral_inferior &lt; umbral_superior</code>. Resultado en modo <code>L</code> con valores 0 (fondo) y 255 (borde) solamente.</td><td><code>cv2.Canny</code></td></tr>
+    <tr><td class="num">8</td><td><code>/rotacion</code></td><td><code>angulo</code>: −360–360 (90), antihorario<br><code>expandir</code>: bool (true)</td><td>Ángulo positivo = antihorario. Con <code>expandir</code> el lienzo crece (90° sobre 200×100 → 100×200); sin él, conserva el tamaño. Relleno de las zonas nuevas: negro, o transparente si la imagen es RGBA.</td><td><code>Image.rotate</code> / <code>cv2.warpAffine</code></td></tr>
+    <tr><td class="num">9</td><td><code>/espejo</code></td><td><code>direccion</code>: <code>"horizontal"</code> | <code>"vertical"</code> (horizontal)</td><td><code>horizontal</code>: izquierda↔derecha. <code>vertical</code>: arriba↔abajo.</td><td><code>ImageOps.mirror</code> / <code>flip</code>, <code>cv2.flip</code></td></tr>
+    <tr><td class="num">10</td><td><code>/redimension</code></td><td><code>ancho</code>: 1–8765 (obligatorio)<br><code>alto</code>: 1–8765 u omitido<br><code>mantener_proporcion</code>: bool (true)</td><td>Con <code>mantener_proporcion</code>, el alto es <code>round(ancho × alto_orig / ancho_orig)</code> y el <code>alto</code> recibido se ignora (300×200 con ancho 100 → 100×67). <strong>Regla:</strong> sin proporción, <code>alto</code> es obligatorio.</td><td><code>Image.resize</code> / <code>cv2.resize</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Todas las rutas empiezan con <code>/api/imagenes/{id}</code>. Por ejemplo:</p>
+<pre><code>POST /api/imagenes/7/desenfoque
+Content-Type: application/json
+
+{ "metodo": "mediana", "tamanio_kernel": 7 }</code></pre>
+
+<!-- ===================================================================== -->
+<h2 id="contrato"><span class="n">6</span>Contrato de la API</h2>
+<p>El frontend depende de estos formatos. <strong>No se pueden cambiar</strong> ni los nombres de los campos ni las rutas. La fuente de verdad es <code>app/schemas.py</code> y la página <code>/docs</code>.</p>
+
+<h3>Respuesta: <code>ImagenOut</code></h3>
+<pre><code>{
+  "id": 12,
+  "nombre_original": "gato.jpg",
+  "url": "/media/0b6f1c2e9a4d4e0f8c1f3b7a2d9e6c41.jpg",
+  "ancho": 1024,
+  "alto": 768,
+  "formato": "JPEG",
+  "tamanio_bytes": 184233,
+  "operacion": "desenfoque",                                   <span class="c">null si es una imagen original</span>
+  "parametros": { "metodo": "mediana", "tamanio_kernel": 7 },  <span class="c">null si es una imagen original</span>
+  "origen_id": 7,                                              <span class="c">null si es una imagen original</span>
+  "creada_en": "2026-09-23T15:42:10"
+}</code></pre>
+<p><code>operacion</code> usa el mismo nombre que la ruta: <code>brillo</code>, <code>escala-grises</code>, <code>redimension</code>, etc.</p>
+
+<h3>Errores</h3>
+<p>Todos los errores que genere el equipo usan el mismo formato que el <code>501</code> actual:</p>
+<pre><code>{
+  "detail": {
+    "codigo": "IMAGEN_NO_ENCONTRADA",
+    "mensaje": "No existe una imagen con id 99."
+  }
+}</code></pre>
+<div class="tabla">
+<table>
+  <thead><tr><th>HTTP</th><th>codigo</th><th>Cuándo</th></tr></thead>
+  <tbody>
+    <tr><td>400</td><td><code>FORMATO_NO_SOPORTADO</code></td><td>El archivo es una imagen válida pero no es PNG, JPEG, WEBP ni BMP (por ejemplo, un GIF).</td></tr>
+    <tr><td>400</td><td><code>ARCHIVO_INVALIDO</code></td><td>El archivo no se puede abrir como imagen (corrupto, vacío o de otro tipo).</td></tr>
+    <tr><td>400</td><td><code>PARAMETROS_INVALIDOS</code></td><td>Se viola una regla de dominio (kernel par, umbrales invertidos, falta el alto…).</td></tr>
+    <tr><td>404</td><td><code>IMAGEN_NO_ENCONTRADA</code></td><td>El id no existe.</td></tr>
+    <tr><td>413</td><td><code>ARCHIVO_DEMASIADO_GRANDE</code></td><td>El archivo supera los 10 MB.</td></tr>
+    <tr><td>422</td><td><em>(automático)</em></td><td>El JSON no respeta el schema. Lo resuelve FastAPI.</td></tr>
+    <tr><td>501</td><td><code>NO_IMPLEMENTADO</code></td><td>Estado inicial. Al entregar no debería quedar ninguno.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>El frontend muestra el campo <code>mensaje</code> al usuario, así que tiene que ser claro y estar en español. El campo <code>funcionalidad</code> solo aparece en <code>NO_IMPLEMENTADO</code>. El schema está en <code>schemas.ErrorRespuesta</code>.</p>
+
+<!-- ===================================================================== -->
+<h2 id="diseno"><span class="n">7</span>Diseño con clases</h2>
+<p>La infraestructura ya está resuelta: <code>ImageService</code>, <code>FileStorage</code>, <code>ImageDAL</code>, las excepciones de dominio (<code>core/exceptions.py</code>), su traducción a HTTP (<code>errors.py</code>) y la subida de imágenes. El servicio define el contrato que tiene que cumplir el procesamiento:</p>
+<ul>
+  <li><code>ImageCodec.inspect(content) → ImageInfo</code> <em>(dado)</em>: abre los bytes, devuelve formato (detectado por contenido), ancho y alto. Si no es una imagen lanza <code>InvalidFile</code>. No filtra formatos: eso lo hace el servicio con <code>config.ALLOWED_FORMATS</code>.</li>
+  <li><code>ImageCodec.open(content) → Image</code>: abre un archivo guardado, listo para procesar (normalizando el modo de color).</li>
+  <li><code>ImageCodec.encode(image, format) → bytes</code>: codifica el resultado en memoria en el formato del origen, convirtiendo el modo si hace falta. El servicio después le pasa esos bytes al almacenamiento.</li>
+  <li><code>Operation</code> (en <code>core/operations.py</code>): clase abstracta con <code>name</code>, <code>parameters</code> y <code>apply(image) → Image</code>. Los routers ya construyen cada subclase con los campos de su schema.</li>
+</ul>
+<p>Dentro de ese contrato, cada equipo diseña su solución; no hay una única correcta. Estos son los <strong>requisitos mínimos</strong>:</p>
+
+<ol>
+  <li><strong>Una subclase de <code>Operation</code> por operación</strong> (diez en total, ya declaradas con su constructor). Cada una recibe sus parámetros en el constructor y los <strong>valida ahí</strong>, lanzando <code>InvalidParameters</code>: no tiene que poder existir un objeto <code>Blur</code> con kernel par. Pueden agregar clases intermedias a la jerarquía (por ejemplo, una base para las operaciones de <code>ImageEnhance</code>).</li>
+  <li><strong>Polimorfismo en lugar de condicionales.</strong> Ninguna parte del código puede tener un <code>if/elif</code> que decida qué hacer según el nombre de la operación. El código que aplica una operación tiene que funcionar con cualquier subclase sin cambios, y agregar una operación número 11 no debería requerir modificar las clases existentes.</li>
+  <li><strong>Usar las excepciones de dominio dadas</strong> (<code>InvalidParameters</code>, <code>InvalidFile</code>…). El exception handler ya las traduce a HTTP; no agreguen <code>try/except</code> en los endpoints.</li>
+  <li><strong>Conversión Pillow ↔ OpenCV encapsulada.</strong> Pillow trabaja en RGB y OpenCV en BGR. Esa conversión tiene que vivir en un único lugar reutilizable, no copiada en cada operación.</li>
+  <li><strong>El core no depende de FastAPI.</strong> Ningún archivo de <code>app/core/</code> puede importar <code>fastapi</code>.</li>
+  <li>Usar <strong>type hints</strong> en todas las firmas públicas y respetar <strong>PEP 8</strong>.</li>
+</ol>
+
+<h3>Cómo queda un endpoint</h3>
+<p>Los routers ya están escritos así:</p>
+<pre><code>@router.post("/blur", summary="6. Blur", **OPTIONS)
+def apply_blur(image_id: int, params: BlurIn, service: ImageService = Depends(get_image_service)):
+    return service.apply(image_id, Blur(**params.model_dump()))</code></pre>
+<p>Toda la lógica está en el core. Como la operación se construye antes de llamar al servicio, si <code>Blur</code> lanza <code>InvalidParameters</code> el exception handler responde <code>400</code> sin llegar a buscar la imagen.</p>
+
+<div class="callout">
+  <strong>Recomendación</strong>
+  <p>Antes de escribir código, dibujen el diagrama de clases (UML) del core y discútanlo en equipo. Ese diagrama es parte de la entrega.</p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="persistencia"><span class="n">8</span>Persistencia</h2>
+<p>La persistencia viene resuelta. <code>app/models.py</code> define el modelo <code>ImageRecord</code> (tabla <code>images</code>) y <code>app/dal.py</code> concentra todas las consultas en <code>ImageDAL</code>: <code>create</code>, <code>get</code>, <code>list</code>, <code>update</code> y <code>delete</code>. Las columnas son:</p>
+<div class="tabla">
+<table>
+  <thead><tr><th>Columna</th><th>Tipo</th><th>Notas</th></tr></thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>entero</td><td>clave primaria, autoincremental</td></tr>
+    <tr><td><code>nombre_original</code></td><td>texto</td><td>nombre que mandó el usuario (en las derivadas, se hereda del origen)</td></tr>
+    <tr><td><code>nombre_archivo</code></td><td>texto, único</td><td>nombre del archivo en disco (UUID + extensión)</td></tr>
+    <tr><td><code>url</code></td><td>texto</td><td>URL pública, <code>/media/&lt;nombre_archivo&gt;</code></td></tr>
+    <tr><td><code>ancho</code>, <code>alto</code></td><td>entero</td><td>en píxeles</td></tr>
+    <tr><td><code>formato</code></td><td>texto</td><td>PNG, JPEG, WEBP o BMP</td></tr>
+    <tr><td><code>tamanio_bytes</code></td><td>entero</td><td>tamaño del archivo guardado</td></tr>
+    <tr><td><code>operacion</code></td><td>texto, nulo</td><td>nombre de la operación que la generó</td></tr>
+    <tr><td><code>parametros</code></td><td>JSON, nulo</td><td>parámetros usados</td></tr>
+    <tr><td><code>origen_id</code></td><td>entero, nulo</td><td>FK a <code>imagenes.id</code>, <code>ON DELETE SET NULL</code></td></tr>
+    <tr><td><code>creada_en</code></td><td>fecha y hora</td><td>se completa al insertar</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout warn">
+  <strong>La imagen no va en la base de datos</strong>
+  <p>La tabla guarda la URL y los metadatos; el binario queda en <code>storage/images/</code>. FastAPI ya sirve esa carpeta en <code>/media</code>, así que el frontend puede mostrar la imagen directamente desde la URL.</p>
+</div>
+<p>El archivo lo guarda <code>FileStorage.save</code>, que devuelve un <code>StoredFile</code> con <code>file_name</code>, <code>url</code> y <code>size_bytes</code>: justo lo que el servicio registra con el DAL. <code>database.py</code> activa las claves foráneas de SQLite, así que el <code>ON DELETE SET NULL</code> de <code>source_id</code> funciona.</p>
+<div class="callout">
+  <strong>Usen siempre <code>app.config</code></strong>
+  <p>La carpeta de imágenes (<code>STORAGE_DIR</code>), la URL de la base (<code>DATABASE_URL</code>), los formatos y el tamaño máximo se toman <strong>siempre</strong> de <code>app/config.py</code>, nunca escritos a mano en el código. Los tests de aceptación redirigen la carpeta y la base a un directorio temporal con las variables de entorno <code>TP_STORAGE_DIR</code> y <code>TP_DATABASE_URL</code>, y si el core usa otras rutas, los tests fallan.</p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="tests"><span class="n">9</span>Tests</h2>
+<h3>Tests de aceptación (dados)</h3>
+<p><code>tests/test_contract.py</code> es este enunciado escrito como código. Usa la API igual que el frontend y verifica cada regla de las secciones 4, 5 y 6: códigos HTTP, formato de errores, orden del listado, que el archivo quede en <code>STORAGE_DIR</code> y la URL en la tabla <code>images</code>, que el origen no cambie, píxeles concretos de cada operación, formatos y modos de color.</p>
+<pre><code>cd backend
+pytest tests/test_contract.py -v</code></pre>
+<p>Arrancan <strong>121 failed, 32 passed</strong>. <strong>Todos tienen que pasar</strong> y <strong>no se pueden modificar</strong>. Si alguno parece contradecir el enunciado, consúltenlo en el foro en vez de cambiarlo.</p>
+
+<h3>Tests propios del equipo</h3>
+<p>Además, en archivos nuevos dentro de <code>backend/tests/</code>:</p>
+<ul>
+  <li><strong>Tests unitarios del core:</strong> al menos uno por operación, sobre imágenes creadas en memoria (por ejemplo, <code>Image.new("RGB", (40, 20), "red")</code>), sin tocar disco ni base de datos. Comprueben propiedades concretas: que el espejo horizontal invierta el píxel de la esquina, que la redimensión con proporción dé el alto esperado, que la escala de grises tenga un solo canal, etc.</li>
+  <li><strong>Tests de validación:</strong> que construir una operación con parámetros inválidos lance la excepción de dominio correspondiente.</li>
+  <li><strong>Tests del codec:</strong> que <code>encode</code> pueda guardar una imagen RGBA como JPEG y que <code>open</code> devuelva una imagen en un modo que las operaciones puedan procesar.</li>
+</ul>
+<p>Los tests propios prueban las clases del core directamente. Los de aceptación prueban la API desde afuera: se complementan, no se reemplazan.</p>
+
+<!-- ===================================================================== -->
+<h2 id="entrega"><span class="n">10</span>Entrega</h2>
+<ul>
+  <li>Un repositorio Git por equipo con el historial de commits de todos los integrantes. No se aceptan entregas en un único commit.</li>
+  <li>Un <code>README.md</code> en la raíz con:
+    <ul>
+      <li>integrantes del equipo,</li>
+      <li>instrucciones para instalar, correr la app y correr los tests,</li>
+      <li>el <strong>diagrama de clases</strong> del core (imagen o Mermaid),</li>
+      <li>las decisiones de diseño más importantes y su justificación (por ejemplo, qué patrón usaron para no tener <code>if/elif</code> y por qué eligieron Pillow u OpenCV en cada operación).</li>
+    </ul>
+  </li>
+  <li>No se suben al repositorio <code>.venv/</code>, <code>data/app.db</code> ni las imágenes de <code>storage/images/</code>.</li>
+</ul>
+
+<h3>Restricciones</h3>
+<ul>
+  <li><strong>No se modifica</strong> nada de <code>frontend/</code>, <code>app/schemas.py</code>, <code>app/config.py</code>, <code>tests/conftest.py</code> ni <code>tests/test_contract.py</code>. Si la solución necesita cambiarlos, está violando el contrato.</li>
+  <li>Se pueden agregar archivos y dependencias (hay que declararlas en <code>requirements.txt</code>).</li>
+  <li>Pillow y OpenCV no se reemplazan por otras librerías de procesamiento de imágenes.</li>
+</ul>
+
+<h3>Sugerencia de orden de trabajo</h3>
+<ol class="hitos">
+  <li>Leer <code>core/service.py</code> para entender qué espera el servicio del codec y de las operaciones.</li>
+  <li><code>ImageCodec.open</code> y <code>ImageCodec.encode</code>, y las operaciones más simples (espejo, escala de grises, brillo). Verificar desde el frontend. Con eso pasan también <code>test_list_includes_derived</code> y <code>test_derived_images_are_kept_without_source</code>.</li>
+  <li>El resto de las operaciones, con sus tests.</li>
+  <li>Tests de integración, README y diagrama.</li>
+</ol>
+<p>Una forma práctica de repartirse el trabajo es que, una vez definida la clase base, cada integrante tome algunas operaciones.</p>
+
+<!-- ===================================================================== -->
+<h2 id="ia"><span class="n">11</span>Uso de IA</h2>
+<p>Pueden usar IA, pero como herramienta para aprender, no para resolver el TP. El trabajo existe para que aprendan a diseñar con clases y a procesar imágenes, y si la IA escribe el código ese aprendizaje no ocurre. <strong>La fuente principal son los apuntes de la materia</strong> y la documentación de Pillow y OpenCV. La IA viene después, para destrabarse o para contrastar lo que ya pensaron.</p>
+
+<h3>Para qué sí</h3>
+<ul>
+  <li><strong>Discutir la arquitectura del core.</strong> Pueden pedirle que proponga cómo organizar la jerarquía de <code>Operation</code> para que el core sea reutilizable: dónde validar, qué clases intermedias conviene tener, dónde encapsular la conversión Pillow ↔ OpenCV, cómo agregar una operación nueva sin tocar las existentes. Tómenlo como una propuesta para discutir en equipo y comparar con lo visto en clase, no como la solución. Quédense solo con lo que puedan justificar.</li>
+  <li><strong>Hacer preguntas concretas.</strong> Por ejemplo: ¿qué diferencia hay entre <code>cv2.blur</code> y <code>cv2.GaussianBlur</code>? ¿Por qué JPEG no puede guardar una imagen RGBA? ¿Cómo paso una imagen de Pillow a un array de <code>numpy</code> y de vuelta?</li>
+  <li><strong>Entender un error</strong> que no pudieron resolver solos, después de haberlo intentado y de haber leído el traceback.</li>
+  <li><strong>Revisar código que ya escribieron:</strong> pedir una crítica del diseño o de la legibilidad, no que lo reescriba.</li>
+</ul>
+
+<h3>Para qué no</h3>
+<ul>
+  <li>Pegar el enunciado y pedir el TP resuelto.</li>
+  <li>Pedirle que haga pasar los tests de aceptación.</li>
+  <li>Copiar código que no pueden explicar línea por línea.</li>
+</ul>
+
+<h3>Cómo preguntar</h3>
+<p><strong>Nunca tiren un prompt sin sentido ni sin un objetivo claro.</strong> Antes de escribir, tengan claro qué quieren saber y cómo van a darse cuenta de si la respuesta sirve. Un buen prompt da contexto (qué están haciendo y qué ya saben), hace una pregunta puntual y dice qué tipo de respuesta esperan.</p>
+<pre><code><span class="c"># Mal: sin contexto, sin objetivo, pide la solución</span>
+hacé la operación de desenfoque
+
+<span class="c"># Bien: contexto, pregunta puntual, respuesta acotada</span>
+Estoy implementando una subclase de Operation con un método
+apply(image) -> Image. Recibe un método de desenfoque ("gaussiano",
+"mediana" o "promedio") y un tamaño de kernel impar. En los apuntes
+vimos que la mediana sirve para el ruido sal y pimienta. ¿Qué
+diferencia hay entre los tres filtros en cómo calculan cada píxel?
+Explicámelo con un ejemplo de 3×3, sin escribir la clase.</code></pre>
+
+<div class="callout warn">
+  <strong>Lo que entregan es de ustedes</strong>
+  <p>Tienen que poder explicar cada línea del código y cada decisión de diseño, usen IA o no. Si una respuesta de la IA contradice los apuntes o este enunciado, manda el enunciado; ante la duda, consulten en el foro.</p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="evaluacion"><span class="n">12</span>Evaluación</h2>
+<div class="tabla">
+<table>
+  <thead><tr><th>Criterio</th><th>Qué se mira</th><th>Peso</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Funcionalidad</strong></td><td>Todos los tests de aceptación pasan y los 14 endpoints funcionan desde el frontend sin modificarlo.</td><td class="num">35 %</td></tr>
+    <tr><td><strong>Diseño orientado a objetos</strong></td><td>Cumple los requisitos de la sección 7. Jerarquía de operaciones clara, sin <code>if/elif</code> por nombre, responsabilidades separadas, core independiente de FastAPI.</td><td class="num">30 %</td></tr>
+    <tr><td><strong>Tests</strong></td><td>Cobertura de las diez operaciones, validaciones y flujos de la API. Los tests pasan y comprueban algo concreto.</td><td class="num">15 %</td></tr>
+    <tr><td><strong>Manejo de errores</strong></td><td>Códigos HTTP y <code>codigo</code> correctos, mensajes claros, traducción centralizada.</td><td class="num">10 %</td></tr>
+    <tr><td><strong>Calidad y documentación</strong></td><td>Legibilidad, nombres, type hints, PEP 8, README y diagrama, historial de commits del equipo.</td><td class="num">10 %</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout warn">
+  <strong>Condiciones de aprobación</strong>
+  <p>Una entrega <strong>no aprueba</strong> si falla algún test de <code>tests/test_contract.py</code> o si se modificó alguno de los archivos marcados como “no modificar”. Pasar los tests es condición necesaria, no suficiente: el diseño se evalúa aparte.</p>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="extras"><span class="n">13</span>Extras (opcionales)</h2>
+<p>Suman puntos solo si todo lo obligatorio está completo. Van en endpoints nuevos, sin romper el contrato existente:</p>
+<ul>
+  <li><strong>Pipeline:</strong> <code>POST /api/imagenes/{id}/pipeline</code> recibe una lista de operaciones con sus parámetros y las aplica en orden, guardando solo el resultado final. Pista: patrón <em>Composite</em>.</li>
+  <li><strong>Historial:</strong> <code>GET /api/imagenes/{id}/historial</code> devuelve la cadena de imágenes desde la original hasta <code>{id}</code>.</li>
+  <li><strong>Operaciones nuevas:</strong> sepia, negativo, binarización (Otsu), ecualización de histograma. Si el diseño es bueno, agregarlas no requiere tocar las clases existentes.</li>
+  <li><strong>Miniaturas:</strong> generar y servir una versión reducida de cada imagen para la galería.</li>
+</ul>
+
+<!-- ===================================================================== -->
+<h2 id="faq"><span class="n">14</span>Preguntas frecuentes</h2>
+<h4>¿Puedo cambiar las firmas de los endpoints?</h4>
+<p>Pueden cambiar los parámetros internos (por ejemplo, agregar dependencias con <code>Depends</code>), pero no la ruta, el método, el cuerpo ni la respuesta.</p>
+<h4>¿Tengo que usar las dos librerías en todas las operaciones?</h4>
+<p>No. Cada operación usa la que el equipo prefiera, pero en el total del trabajo cada librería tiene que aparecer en al menos dos operaciones.</p>
+<h4>El frontend dice “Servidor desconectado”.</h4>
+<p>El backend no está corriendo. Abran el frontend desde el propio backend (<code>http://localhost:8765</code>). Si lo sirven con otra herramienta o el backend usa otro puerto, indiquen dónde está la API agregando <code>?api=http://localhost:PUERTO</code> a la URL.</p>
+<h4>Al aplicar una edición dice “La imagen no está en el servidor”.</h4>
+<p>Esto pasa cuando la subida falló (por ejemplo, un formato no soportado o un archivo de más de 10&nbsp;MB) y el frontend solo muestra una vista local. Revisen el error en el panel <strong>Actividad</strong>.</p>
+<h4>¿Qué pasa si roto una imagen JPEG con <code>expandir</code>?</h4>
+<p>Aparecen esquinas nuevas y se rellenan de negro (en RGBA, transparentes). Ojo: si el core convierte a RGBA para rotar, tiene que volver a un modo que JPEG pueda guardar.</p>
+<h4>Mis tests pasan en mi máquina pero no los de aceptación, por las rutas.</h4>
+<p>Seguramente usan una ruta escrita a mano en lugar de <code>config.STORAGE_DIR</code> o <code>config.DATABASE_URL</code>. Ver la sección 8.</p>
+<h4>¿Puedo usar OpenCV para leer y escribir los archivos?</h4>
+<p>Sí, siempre que el resultado cumpla el contrato (formato, modo y tamaño). Lo más simple es leer y escribir con Pillow y convertir a <code>numpy</code> solo para las operaciones de OpenCV.</p>
+
+<footer>TP 1 · Editor de imágenes · Ante cualquier duda, consultar en el foro de la materia.</footer>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image Editor — TP 1</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bdb'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%23fff'/%3E%3Cpath d='M4 26l8-9 5 6 4-4 7 7z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Image Editor</h1>
+        <p>TP 1 · Image processing with Pillow / OpenCV</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <a class="link" href="/docs" id="link-docs" target="_blank" rel="noopener">API docs</a>
+      <span class="status" id="server-status" data-status="checking">
+        <span class="dot"></span><span class="status-text">Checking server…</span>
+      </span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left column: upload + gallery -->
+    <aside class="panel" aria-labelledby="images-title">
+      <div class="panel-head">
+        <h2 id="images-title">Images</h2>
+        <button class="btn btn-ghost btn-sm" id="btn-refresh" title="Reload list">Reload</button>
+      </div>
+
+      <label class="dropzone" id="dropzone" for="file-input">
+        <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <strong>Upload an image</strong>
+        <span>Drag it here or click · PNG, JPG, WEBP, BMP · max. 10 MB</span>
+      </label>
+
+      <div class="gallery" id="gallery" aria-live="polite"></div>
+    </aside>
+
+    <!-- Center: comparison -->
+    <section class="panel panel-view" aria-label="Image view">
+      <div class="comparison">
+        <figure class="canvas" id="current-canvas">
+          <figcaption>
+            <span class="caption-label">Current image</span>
+            <span class="meta" id="current-meta"></span>
+          </figcaption>
+          <div class="frame" id="current-frame">
+            <div class="empty">Upload or pick an image to get started</div>
+          </div>
+        </figure>
+
+        <figure class="canvas" id="result-canvas">
+          <figcaption>
+            <span class="caption-label">Result</span>
+            <span class="meta" id="result-meta"></span>
+          </figcaption>
+          <div class="frame" id="result-frame">
+            <div class="empty">Apply an edit to see the result</div>
+          </div>
+          <div class="result-actions" id="result-actions" hidden>
+            <button class="btn btn-primary" id="btn-use-result">Keep editing from the result</button>
+            <a class="btn btn-ghost" id="btn-download" download>Download</a>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Right column: edits -->
+    <aside class="panel" aria-labelledby="edits-title">
+      <div class="panel-head">
+        <h2 id="edits-title">Edits</h2>
+        <span class="counter">10 operations</span>
+      </div>
+
+      <div class="operations" id="operations" role="listbox" aria-label="Available operations"></div>
+
+      <form class="form" id="operation-form" novalidate>
+        <div class="form-head">
+          <h3 id="op-name"></h3>
+          <span class="lib" id="op-lib"></span>
+        </div>
+        <p class="op-description" id="op-description"></p>
+        <div class="fields" id="op-fields"></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btn-reset">Reset</button>
+          <button type="submit" class="btn btn-primary" id="btn-apply">Apply</button>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="assertive"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
