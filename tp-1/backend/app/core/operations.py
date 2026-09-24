@@ -13,7 +13,7 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from app.core.exceptions import NotImplementedFeature
 
@@ -68,7 +68,9 @@ class Brightness(Operation):
 
     def apply(self, image: Image.Image) -> Image.Image:
         factor = self.factor  # the value received in the JSON body, e.g. 1.5
-        raise NotImplementedFeature("Brightness")
+        image = ImageEnhance.Brightness(image).enhance(factor)
+        return image
+        # raise NotImplementedFeature("Brightness")
 
 
 class Contrast(Operation):
@@ -76,9 +78,13 @@ class Contrast(Operation):
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
+        self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+        factor = self.factor
+        image = ImageEnhance.Contrast(image).enhance(factor)
+        return image
+        # raise NotImplementedFeature("Contrast")
 
 
 class Saturation(Operation):
@@ -86,9 +92,13 @@ class Saturation(Operation):
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
+        self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
+        factor = self.factor
+        image = ImageEnhance.Color(image).enhance(factor)
+        return image
+        # raise NotImplementedFeature("Saturation")
 
 
 class Sharpness(Operation):
@@ -96,9 +106,13 @@ class Sharpness(Operation):
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
+        self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+        factor = self.factor
+        image = ImageEnhance.Sharpness(image).enhance(factor)
+        return image
+        #raise NotImplementedFeature("Sharpness")
 
 
 class Grayscale(Operation):
