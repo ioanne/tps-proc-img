@@ -34,6 +34,7 @@ class ImageCodec:
             with Image.open(BytesIO(content)) as image:
                 image.verify()
                 return ImageInfo(format=image.format, width=image.width, height=image.height)
+
         except Exception as exc:
             raise InvalidFile() from exc
 
@@ -43,23 +44,52 @@ class ImageCodec:
         The color mode is normalized to L, RGB or RGBA, so the operations only
         have to deal with those three.
         """
-        image = Image.open(BytesIO(content))
-        image.load()
+        try:
+            image = Image.open(BytesIO(content))
+            image.load()
+        except Exception as exc:
+            raise InvalidFile() from exc
+
+        # Si ya está en uno de los 3 modos estándar, la devolvemos tal cual
         if image.mode in ("L", "RGB", "RGBA"):
             return image
+
+        # Normalización a L, RGB o RGBA
         if image.mode == "1":
             return image.convert("L")
+
         if image.mode in ("LA", "PA") or (image.mode == "P" and "transparency" in image.info):
             return image.convert("RGBA")
+
         return image.convert("RGB")
 
     def encode(self, image: Image.Image, image_format: str) -> bytes:
         """Encodes `image` in `image_format`, converting its color mode if that format
         cannot store it (e.g. RGBA in JPEG)."""
-        if image_format == "JPEG" and image.mode not in ("L", "RGB"):
+        """if image_format == "JPEG" and image.mode not in ("L", "RGB"):
             image = image.convert("RGB")
         elif image.mode not in ("L", "RGB", "RGBA"):
             image = image.convert("RGBA" if "A" in image.mode else "RGB")
         buffer = BytesIO()
         image.save(buffer, format=image_format)
+        return buffer.getvalue()"""
+        fmt = image_format.upper()
+        if fmt == "JPG":
+            fmt = "JPEG"
+
+        # JPEG no permite canales Alfa (RGBA, LA)
+        if fmt == "JPEG":
+            if image.mode in ("RGBA", "LA"):
+                # Fondo blanco para no dejar fondo negro en áreas transparentes
+                background = Image.new("RGB", image.size, (255, 255, 255))
+                alpha = image.split()[-1]
+                background.paste(image, mask=alpha)
+                image = background
+            elif image.mode != "L":
+                image = image.convert("RGB")
+        elif image.mode not in ("L", "RGB", "RGBA"):
+            image = image.convert("RGBA" if "A" in image.mode else "RGB")
+
+        buffer = BytesIO()
+        image.save(buffer, format=fmt)
         return buffer.getvalue()

@@ -122,7 +122,10 @@ class Grayscale(Operation):
         super().__init__()
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        #raise NotImplementedFeature("Grayscale")
+        if image.mode == "L":
+            return image
+        return ImageOps.grayscale(image)
 
 
 class Blur(Operation):
@@ -130,10 +133,27 @@ class Blur(Operation):
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
         # TODO: domain rule, kernel_size must be odd.
+        #super().__init__(method=method, kernel_size=kernel_size)
+        if kernel_size % 2 == 0:
+            raise InvalidParameters("El tamaño del kernel debe ser impar.")
+
         super().__init__(method=method, kernel_size=kernel_size)
+        self.method = method.lower()
+        self.kernel_size = kernel_size
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        #raise NotImplementedFeature("Blur")
+        # El radio para BoxBlur / GaussianBlur equivale a la distancia del centro al borde
+        radius = (self.kernel_size - 1) / 2
+
+        if self.method == "gaussian":
+            return image.filter(ImageFilter.GaussianBlur(radius=radius))
+        elif self.method in ("average", "box"):
+            return image.filter(ImageFilter.BoxBlur(radius=radius))
+        elif self.method == "median":
+            return image.filter(ImageFilter.MedianFilter(size=self.kernel_size))
+        else:
+            raise InvalidParameters(f"Método de desenfoque desconocido: {self.method}")
 
 
 class Edges(Operation):
@@ -141,10 +161,25 @@ class Edges(Operation):
 
     def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
         # TODO: domain rule, lower_threshold < upper_threshold.
+        #super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
+        # Validación de regla de dominio: lower_threshold debe ser menor que upper_threshold
+        if lower_threshold >= upper_threshold:
+            raise InvalidParameters("lower_threshold must be strictly less than upper_threshold.")
+
         super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
+        self.lower_threshold = lower_threshold
+        self.upper_threshold = upper_threshold
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Edge detection")
+        #raise NotImplementedFeature("Edge detection")
+        # Convertir a escala de grises primero para Canny
+        gray_image = image.convert("L")
+        np_image = np.array(gray_image)
+
+        # Aplicar el detector de bordes de Canny
+        edges = cv2.Canny(np_image, self.lower_threshold, self.upper_threshold)
+
+        return Image.fromarray(edges)
 
 
 class Rotation(Operation):
