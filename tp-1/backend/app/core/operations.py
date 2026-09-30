@@ -13,10 +13,12 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageOps, ImageFilter
+import cv2
 
 from app.core.exceptions import NotImplementedFeature
-
+from app.core.exceptions import InvalidParameters  
+import numpy as np
 
 class Operation(ABC):
     name: ClassVar[str]
