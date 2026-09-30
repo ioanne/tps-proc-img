@@ -30,5 +30,8 @@ responden **501 Not Implemented**. En el estado inicial los tests dan `121 faile
 trabajo del equipo es implementar esas clases y lograr que pasen todos.
 
 ## Integrantes
-
-- _completar_
+-Grupo 4:
+- Ikemiya, Facundo
+- Gold, Nicolas
+- Nodar, Natalia
+- Betzabe Mayra, Aldana Sandoval
