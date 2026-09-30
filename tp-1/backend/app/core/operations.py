@@ -13,8 +13,8 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image
-
+from PIL import Image, ImageEnhance
+from PIL import ImageFilter
 from app.core.exceptions import NotImplementedFeature
 
 
@@ -34,32 +34,6 @@ class Operation(ABC):
 
 
 class Brightness(Operation):
-    """Adjusts the brightness of the image by `factor`: 0 = black, 1.0 = unchanged.
-
-    How the parameters get here (the other nine operations work the same way):
-
-      1. The client sends `POST /api/images/{id}/brightness` with the JSON body
-         `{"factor": 1.5}`. The fields are optional: `{}` means `factor = 1.0`
-         (but the body itself is required: no body at all is a 422).
-      2. FastAPI parses the body into `schemas.BrightnessIn` and validates the
-         ranges declared there (0 <= factor <= 3). If they are not met it answers
-         422 on its own: this class never sees an out-of-range `factor`.
-      3. The router (`routers/operations.py`) builds the operation with
-         `Brightness(**params.model_dump())`, i.e. `Brightness(factor=1.5)`. The
-         constructor arguments are the schema fields, same names, already typed
-         (`factor` is a `float`) and with the defaults applied.
-      4. The constructor validates the domain rules the schema cannot express
-         (raising `InvalidParameters` -> 400; brightness has none) and passes
-         the values to `super().__init__`. That dict is what `self.parameters`
-         returns and what the service stores in the database and returns in
-         `ImageOut.parameters` (`{"factor": 1.5}`), so it must keep the same keys
-         as the schema.
-      5. The router hands the operation to `ImageService.apply`, which opens the
-         source image and calls `apply(image)`. Inside `apply` the values are read
-         from `self.parameters["factor"]` (or from an attribute the constructor
-         saved, e.g. `self.factor`).
-    """
-
     name = "brightness"
 
     def __init__(self, factor: float = 1.0) -> None:
@@ -67,8 +41,12 @@ class Brightness(Operation):
         self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        factor = self.factor  # the value received in the JSON body, e.g. 1.5
-        raise NotImplementedFeature("Brightness")
+        #factor = self.factor  # the value received in the JSON body, e.g. 1.5
+        image = image.convert("RGB")  
+        image = ImageEnhance.Brightness(image).enhance(self.factor)
+        return image
+    
+        #raise NotImplementedFeature("Brightness")
 
 
 class Contrast(Operation):
@@ -76,9 +54,12 @@ class Contrast(Operation):
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
+        self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+        image = ImageEnhance.Contrast(image).enhance(self.factor)
+        return image
+        #raise NotImplementedFeature("Contrast")
 
 
 class Saturation(Operation):
@@ -86,19 +67,26 @@ class Saturation(Operation):
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
+        self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
-
+        image = image.convert("RGB")
+        imange = ImageEnhance.Color(image).enhance(self.factor)
+        return image
+        #raise NotImplementedFeature("Saturation")
 
 class Sharpness(Operation):
     name = "sharpness"
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
+        self.factor = factor    
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+        image = image.convert("RGB")
+        image = ImageEnhance.Sharpness(image).enhance(self.factor)
+        return image
+        ##raise NotImplementedFeature("Sharpness")
 
 
 class Grayscale(Operation):
@@ -106,9 +94,12 @@ class Grayscale(Operation):
 
     def __init__(self) -> None:
         super().__init__()
+        
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        image = image.convert("L")
+        return image
+        #raise NotImplementedFeature("Grayscale")
 
 
 class Blur(Operation):
@@ -117,9 +108,20 @@ class Blur(Operation):
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
         # TODO: domain rule, kernel_size must be odd.
         super().__init__(method=method, kernel_size=kernel_size)
+        self.method = method
+        self.kernel_size = kernel_size
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        image = image.convert("RGB")
+        if self.method == "gaussian":
+            image = image.filter(ImageFilter.GaussianBlur(radius=self.kernel_size))
+        elif self.method == "median":
+            image = image.filter(ImageFilter.MedianFilter(size=self.kernel_size))
+        elif self.method == "average":
+            image = image.filter(ImageFilter.BoxBlur(radius=self.kernel_size))
+
+        return image   
+        #raise NotImplementedFeature("Blur")
 
 
 class Edges(Operation):
