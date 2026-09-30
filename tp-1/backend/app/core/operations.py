@@ -13,9 +13,12 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image
+import cv2
+import numpy as np
+from PIL import Image, ImageEnhance, ImageOps
 
-from app.core.exceptions import NotImplementedFeature
+from app.core.exceptions import InvalidParameters
+from app.core.imaging import cv2_to_pil, pil_to_cv2
 
 
 class Operation(ABC):
@@ -32,8 +35,23 @@ class Operation(ABC):
     def apply(self, image: Image.Image) -> Image.Image:
         """Returns a NEW image with the operation applied. `image` must not be modified."""
 
+class EnhanceOperation(Operation):
+    """Base para operaciones Pillow ImageEnhance."""
 
-class Brightness(Operation):
+    _enhancer_class: ClassVar
+
+    def apply(self, image: Image.Image) -> Image.Image:
+        factor = self._parameters["factor"]
+
+        if image.mode == "RGBA":
+            r, g, b, a = image.split()
+            rgb = Image.merge("RGB", (r, g, b))
+            enhanced = self._enhancer_class(rgb).enhance(factor)
+            return Image.merge("RGBA", (*enhanced.split(), a))
+
+        return self._enhancer_class(image).enhance(factor)
+
+class Brightness(EnhanceOperation):
     """Adjusts the brightness of the image by `factor`: 0 = black, 1.0 = unchanged.
 
     How the parameters get here (the other nine operations work the same way):
@@ -61,44 +79,40 @@ class Brightness(Operation):
     """
 
     name = "brightness"
+    _enhancer_class = ImageEnhance.Brightness
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
         self.factor = factor
 
-    def apply(self, image: Image.Image) -> Image.Image:
-        factor = self.factor  # the value received in the JSON body, e.g. 1.5
-        raise NotImplementedFeature("Brightness")
-
-
-class Contrast(Operation):
+class Contrast(EnhanceOperation):
     name = "contrast"
+    _enhancer_class = ImageEnhance.Contrast
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
 
-    def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+   
 
 
-class Saturation(Operation):
+class Saturation(EnhanceOperation):
     name = "saturation"
+    _enhancer_class = ImageEnhance.Color
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
 
-    def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
 
 
-class Sharpness(Operation):
+
+class Sharpness(EnhanceOperation):
     name = "sharpness"
+    _enhancer_class = ImageEnhance.Sharpness
 
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
 
-    def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+
 
 
 class Grayscale(Operation):
@@ -108,39 +122,110 @@ class Grayscale(Operation):
         super().__init__()
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        if image.mode == "L":
+            return image.copy()
+
+        rgb = image.convert("RGB")
+        gray = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2GRAY)
+
+        return Image.fromarray(gray, mode="L")
 
 
 class Blur(Operation):
     name = "blur"
 
-    def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
-        super().__init__(method=method, kernel_size=kernel_size)
+    def __init__(
+        self,
+        method: str = "gaussian",
+        kernel_size: int = 5,
+    ) -> None:
+        if kernel_size % 2 == 0:
+            raise InvalidParameters("kernel_size must be odd.")
+
+        super().__init__(
+            method=method,
+            kernel_size=kernel_size,
+        )
+        self.method = method
+        self.kernel_size = kernel_size
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        original_mode = image.mode
+        cv_array = pil_to_cv2(image)
+        ksize = (self.kernel_size, self.kernel_size)
+
+        if self.method == "gaussian":
+            result = cv2.GaussianBlur(cv_array, ksize, 0)
+        elif self.method == "median":
+            result = cv2.medianBlur(cv_array, self.kernel_size)
+        else:
+            result = cv2.blur(cv_array, ksize)
+
+        return cv2_to_pil(result, original_mode)
 
 
 class Edges(Operation):
     name = "edges"
 
-    def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
-        # TODO: domain rule, lower_threshold < upper_threshold.
-        super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
+    def __init__(
+        self,
+        lower_threshold: int = 100,
+        upper_threshold: int = 200,
+    ) -> None:
+        if lower_threshold >= upper_threshold:
+            raise InvalidParameters(
+                "lower_threshold must be less than upper_threshold."
+            )
+
+        super().__init__(
+            lower_threshold=lower_threshold,
+            upper_threshold=upper_threshold,
+        )
+        self.lower_threshold = lower_threshold
+        self.upper_threshold = upper_threshold
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Edge detection")
+        if image.mode == "L":
+            gray = np.array(image)
+        else:
+            gray = cv2.cvtColor(
+                np.array(image.convert("RGB")),
+                cv2.COLOR_RGB2GRAY,
+            )
 
+        edges = cv2.Canny(
+            gray,
+            self.lower_threshold,
+            self.upper_threshold,
+        )
+
+        return Image.fromarray(edges, mode="L")
 
 class Rotation(Operation):
     name = "rotation"
 
-    def __init__(self, angle: float = 90.0, expand: bool = True) -> None:
+    def __init__(
+        self,
+        angle: float = 90.0,
+        expand: bool = True,
+    ) -> None:
         super().__init__(angle=angle, expand=expand)
+        self.angle = angle
+        self.expand = expand
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Rotation")
+        if image.mode == "RGBA":
+            fill = (0, 0, 0, 0)
+        elif image.mode == "L":
+            fill = 0
+        else:
+            fill = (0, 0, 0)
+
+        return image.rotate(
+            self.angle,
+            expand=self.expand,
+            fillcolor=fill,
+        )
 
 
 class Mirror(Operation):
@@ -148,17 +233,46 @@ class Mirror(Operation):
 
     def __init__(self, direction: str = "horizontal") -> None:
         super().__init__(direction=direction)
+        self.direction = direction
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Mirror")
+        if self.direction == "horizontal":
+            return ImageOps.mirror(image)
 
+        return ImageOps.flip(image)
 
 class Resize(Operation):
     name = "resize"
 
-    def __init__(self, width: int, height: int | None = None, keep_aspect_ratio: bool = True) -> None:
-        # TODO: domain rule, height is required if keep_aspect_ratio is false.
-        super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
+    def __init__(
+        self,
+        width: int,
+        height: int | None = None,
+        keep_aspect_ratio: bool = True,
+    ) -> None:
+        if not keep_aspect_ratio and height is None:
+            raise InvalidParameters(
+                "height is required when keep_aspect_ratio is false."
+            )
+
+        super().__init__(
+            width=width,
+            height=height,
+            keep_aspect_ratio=keep_aspect_ratio,
+        )
+        self.width = width
+        self.height = height
+        self.keep_aspect_ratio = keep_aspect_ratio
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Resize")
+        orig_w, orig_h = image.size
+
+        if self.keep_aspect_ratio:
+            new_h = round(self.width * orig_h / orig_w)
+        else:
+            new_h = self.height
+
+        return image.resize(
+            (self.width, new_h),
+            Image.Resampling.LANCZOS,
+        )

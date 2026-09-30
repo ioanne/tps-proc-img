@@ -11,6 +11,8 @@ Conversion between bytes and images in memory.
 from dataclasses import dataclass
 from io import BytesIO
 
+import cv2
+import numpy as np
 from PIL import Image
 
 from app.core.exceptions import InvalidFile
@@ -21,7 +23,22 @@ class ImageInfo:
     format: str  # as in Pillow's `Image.format` ("PNG", "JPEG", "GIF", ...)
     width: int
     height: int
+def pil_to_cv2(image: Image.Image) -> np.ndarray:
+    """Convierte PIL Image a array OpenCV."""
+    if image.mode == "RGBA":
+        return cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
+    if image.mode == "RGB":
+        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    return np.array(image)
 
+
+def cv2_to_pil(array: np.ndarray, mode: str) -> Image.Image:
+    """Convierte array OpenCV de vuelta a PIL Image."""
+    if mode == "RGBA":
+        return Image.fromarray(cv2.cvtColor(array, cv2.COLOR_BGRA2RGBA))
+    if mode == "RGB":
+        return Image.fromarray(cv2.cvtColor(array, cv2.COLOR_BGR2RGB))
+    return Image.fromarray(array)
 
 class ImageCodec:
     def inspect(self, content: bytes) -> ImageInfo:
