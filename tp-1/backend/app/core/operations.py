@@ -146,6 +146,9 @@ class Blur(Operation):
     def apply(self, image: Image.Image) -> Image.Image:
         #raise NotImplementedFeature("Blur")
         # El radio para BoxBlur / GaussianBlur equivale a la distancia del centro al borde
+        if self.kernel_size == 1:
+                    return image.copy()
+        
         radius = (self.kernel_size - 1) / 2
 
         if self.method == "gaussian":
@@ -216,14 +219,19 @@ class Mirror(Operation):
 
 
 class Resize(Operation):
+    """Resizes the image to `width`.
+
+    - keep_aspect_ratio=True: the height is computed from the original
+      proportion and the received `height` is ignored.
+    - keep_aspect_ratio=False: the image is resized to exactly width x height.
+    """
+
     name = "resize"
 
     def __init__(self, width: int, height: int | None = None, keep_aspect_ratio: bool = True) -> None:
-        # TODO: domain rule, height is required if keep_aspect_ratio is false.
-        #super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
-        # Validación de regla de dominio: height es obligatorio si keep_aspect_ratio es False
+        # Domain rule: without keeping the proportion, the height is required.
         if not keep_aspect_ratio and height is None:
-            raise InvalidParameters("Height is required when keep_aspect_ratio is False.")
+            raise InvalidParameters("height is required when keep_aspect_ratio is false.")
 
         super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
         self.width = width
@@ -231,25 +239,13 @@ class Resize(Operation):
         self.keep_aspect_ratio = keep_aspect_ratio
 
     def apply(self, image: Image.Image) -> Image.Image:
-        #raise NotImplementedFeature("Resize")
-        orig_w, orig_h = image.size
+        new_size = (self.width, self._target_height(image))
+        return image.resize(new_size, resample=Image.Resampling.LANCZOS)
 
-        if self.keep_aspect_ratio:
-            if self.height is None:
-                # Calcular altura manteniendo la proporción del nuevo ancho
-                new_h = round(orig_h * (self.width / orig_w))
-                new_w = self.width
-            else:
-                # Si ambos vienen dados, redimensionar proporcionalmente para que quepa dentro de la caja (bounding box)
-                ratio = min(self.width / orig_w, self.height / orig_h)
-                new_w = round(orig_w * ratio)
-                new_h = round(orig_h * ratio)
-        else:
-            new_w = self.width
-            new_h = self.height
+    def _target_height(self, image: Image.Image) -> int:
+        if not self.keep_aspect_ratio:
+            return self.height
 
-        # Evitar dimensiones menores a 1 píxel
-        new_w = max(1, new_w)
-        new_h = max(1, new_h)
-
-        return image.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+        original_width, original_height = image.size
+        # max(1, ...) avoids a 0 px height on very wide images.
+        return max(1, round(self.width * original_height / original_width))
