@@ -63,3 +63,5 @@ class ImageCodec:
         buffer = BytesIO()
         image.save(buffer, format=image_format)
         return buffer.getvalue()
+
+# mi primer commit
