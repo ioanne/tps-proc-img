@@ -205,7 +205,21 @@ class Rotation(Operation):
         super().__init__(angle=angle, expand=expand)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Rotation")
+        angle = self.parameters["angle"]
+        expand = self.parameters["expand"]
+
+        if image.mode == "RGBA":
+            fill = (0, 0, 0, 0)
+        elif image.mode == "RGB":
+            fill = (0, 0, 0)
+        else:
+            fill = 0
+
+        return image.rotate(
+            angle,
+            expand=expand,
+            fillcolor=fill
+        )
 
 
 class Mirror(Operation):
