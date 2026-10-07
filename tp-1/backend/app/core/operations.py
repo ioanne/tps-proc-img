@@ -78,7 +78,7 @@ class Contrast(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+        return ImageEnhance.Contrast(image).enhance(self.parameters["factor"])
 
 
 class Saturation(Operation):
