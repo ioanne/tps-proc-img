@@ -10,12 +10,36 @@ in the constructor (raising `InvalidParameters`) and implements `apply`.
 The constructor arguments match the fields of the schemas in `app/schemas.py`.
 """
 
+import cv2 #PARA ALGUNSO CAMBIOS LOS NECESITO
+import numpy as np
+
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageOps #voy cambiando a medida que cambio los raise
 
-from app.core.exceptions import NotImplementedFeature
+from app.core.exceptions import InvalidParameters, NotImplementedFeature #agregado por el blur (invalid parameters)
+
+def pil_to_cv(image: Image.Image) -> np.ndarray:
+    array = np.array(image)
+
+    if image.mode == "RGB":
+        return cv2.cvtColor(array, cv2.COLOR_RGB2BGR)
+
+    if image.mode == "RGBA":
+        return cv2.cvtColor(array, cv2.COLOR_RGBA2BGRA)
+
+    return array
+
+
+def cv_to_pil(array: np.ndarray, mode: str) -> Image.Image:
+    if mode == "RGB":
+        array = cv2.cvtColor(array, cv2.COLOR_BGR2RGB)
+
+    elif mode == "RGBA":
+        array = cv2.cvtColor(array, cv2.COLOR_BGRA2RGBA)
+
+    return Image.fromarray(array)
 
 
 class Operation(ABC):
@@ -88,7 +112,7 @@ class Saturation(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
+        return ImageEnhance.Color(image).enhance(self.parameters["factor"])
 
 
 class Sharpness(Operation):
@@ -98,7 +122,7 @@ class Sharpness(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+        return ImageEnhance.Sharpness(image).enhance(self.parameters["factor"])
 
 
 class Grayscale(Operation):
@@ -108,29 +132,70 @@ class Grayscale(Operation):
         super().__init__()
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        return ImageOps.grayscale(image)
 
 
-class Blur(Operation):
+class Blur(Operation): #con OpenCV
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
+        if kernel_size % 2 == 0:
+            raise InvalidParameters("The kernel size must be odd.")
+
         super().__init__(method=method, kernel_size=kernel_size)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        method = self.parameters["method"]
+        kernel_size = self.parameters["kernel_size"]
+
+        if kernel_size == 1:
+            return image.copy()
+
+        cv_image = pil_to_cv(image)
+
+        if method == "gaussian":
+            result = cv2.GaussianBlur(
+                cv_image,
+                (kernel_size, kernel_size),
+                0
+            )
+        elif method == "median":
+            result = cv2.medianBlur(cv_image, kernel_size)
+        else:
+            result = cv2.blur(
+                cv_image,
+                (kernel_size, kernel_size)
+            )
+
+        return cv_to_pil(result, image.mode)
 
 
 class Edges(Operation):
     name = "edges"
 
     def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
-        # TODO: domain rule, lower_threshold < upper_threshold.
+        if lower_threshold >= upper_threshold:
+            raise InvalidParameters("The lower threshold must be smaller than the upper threshold.")
+
         super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Edge detection")
+        cv_image = pil_to_cv(image)
+
+        if image.mode == "RGBA":
+            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2GRAY)
+        elif image.mode == "RGB":
+            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = cv_image
+
+        edges = cv2.Canny(
+            gray,
+            self.parameters["lower_threshold"],
+            self.parameters["upper_threshold"]
+        )
+
+        return Image.fromarray(edges)
 
 
 class Rotation(Operation):
@@ -150,7 +215,12 @@ class Mirror(Operation):
         super().__init__(direction=direction)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Mirror")
+        direction = self.parameters["direction"]
+
+        if direction == "horizontal":
+            return ImageOps.mirror(image)
+
+        return ImageOps.flip(image)
 
 
 class Resize(Operation):
