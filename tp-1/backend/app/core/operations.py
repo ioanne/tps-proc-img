@@ -226,9 +226,43 @@ class Mirror(Operation):
 class Resize(Operation):
     name = "resize"
 
-    def __init__(self, width: int, height: int | None = None, keep_aspect_ratio: bool = True) -> None:
-        # TODO: domain rule, height is required if keep_aspect_ratio is false.
-        super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
+    def __init__(
+        self,
+        width: int,
+        height: int | None = None,
+        keep_aspect_ratio: bool = True
+    ) -> None:
+
+        if not keep_aspect_ratio and height is None:
+            raise InvalidParameters(
+                "Height is required when keep_aspect_ratio is false."
+            )
+
+        super().__init__(
+            width=width,
+            height=height,
+            keep_aspect_ratio=keep_aspect_ratio
+        )
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Resize")
+        width = self.parameters["width"]
+        height = self.parameters["height"]
+        keep_aspect_ratio = self.parameters["keep_aspect_ratio"]
+
+        if keep_aspect_ratio:
+            height = round(width * image.height / image.width)
+
+        cv_image = pil_to_cv(image)
+
+        if width < image.width or height < image.height:
+            interpolation = cv2.INTER_AREA
+        else:
+            interpolation = cv2.INTER_CUBIC
+
+        result = cv2.resize(
+            cv_image,
+            (width, height),
+            interpolation=interpolation
+        )
+
+        return cv_to_pil(result, image.mode)
