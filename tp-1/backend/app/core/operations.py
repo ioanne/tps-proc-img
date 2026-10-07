@@ -13,7 +13,7 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from app.core.exceptions import NotImplementedFeature
 
@@ -31,6 +31,7 @@ class Operation(ABC):
     @abstractmethod
     def apply(self, image: Image.Image) -> Image.Image:
         """Returns a NEW image with the operation applied. `image` must not be modified."""
+        
 
 
 class Brightness(Operation):
@@ -67,8 +68,7 @@ class Brightness(Operation):
         self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        factor = self.factor  # the value received in the JSON body, e.g. 1.5
-        raise NotImplementedFeature("Brightness")
+        return ImageEnhance.Brightness(image).enhance(self.factor)
 
 
 class Contrast(Operation):
