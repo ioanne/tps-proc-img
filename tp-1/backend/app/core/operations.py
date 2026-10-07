@@ -104,15 +104,13 @@ class Blur(Operation):
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
+        if kernel_size % 2 == 0:
+            raise InvalidParameters("El kernel size debe ser impar")
         super().__init__(method=method, kernel_size=kernel_size)
         self.method = method
         self.kernel_size = kernel_size
 
     def apply(self, image: Image.Image) -> Image.Image:
-        if self.kernel_size % 2 == 0:
-            raise InvalidParameters("El kernel Size debe ser impar")
-    
         if self.method == "gaussian":
             image = image.filter(ImageFilter.GaussianBlur(radius=self.kernel_size))
         elif self.method == "median":
@@ -128,7 +126,8 @@ class Edges(Operation):
     name = "edges"
 
     def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
-        # TODO: domain rule, lower_threshold < upper_threshold.
+        if lower_threshold >= upper_threshold:
+            raise InvalidParameters("lower_threshold debe ser menor que upper_threshold")
         super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
         self.lower_threshold = lower_threshold
         self.upper_threshold = upper_threshold
@@ -202,13 +201,12 @@ class Resize(Operation):
         original_width, original_height = image.size
 
         if self.keep_aspect_ratio:
-            new_height = self.height
-            new_width = int(original_width * self.height / original_height)
+            new_width = self.width
+            new_height = round(self.width * original_height / original_width)
         else:
             new_width = self.width
             new_height = self.height
 
-        resized_image = image.resize((new_width, new_height))
-        return resized_image    
+        return image.resize((new_width, new_height))    
 
         #raise NotImplementedFeature("Resize")
