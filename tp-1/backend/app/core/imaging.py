@@ -25,9 +25,9 @@ class ImageInfo:
 
 class ImageCodec:
     def inspect(self, content: bytes) -> ImageInfo:
-        """Opens `content` and returns its format (detected by content) and size.
+        """Opens content and returns its format (detected by content) and size.
 
-        Raises `InvalidFile` if it cannot be opened as an image (includes empty
+        Raises InvalidFile if it cannot be opened as an image (includes empty
         content). It does NOT check the allowed formats: that is done by the service.
         """
         try:
@@ -39,9 +39,25 @@ class ImageCodec:
 
     def open(self, content: bytes) -> Image.Image:
         """Opens the bytes of a stored file as an image ready to be processed."""
-        raise NotImplementedFeature("Open image")
+        try:
+            img = Image.open(BytesIO(content))
+            img.load()  # force loading the image data into memory
+            return img
+        except Exception as exc:
+            raise NotImplementedFeature("Open image") from exc
 
     def encode(self, image: Image.Image, image_format: str) -> bytes:
-        """Encodes `image` in `image_format`, converting its color mode if that format
-        cannot store it (e.g. RGBA in JPEG)."""
-        raise NotImplementedFeature("Encode image")
+        """Encodes image in image_format, converting its color mode if that format cannot store it (e.g. RGBA in JPEG)."""
+        formato = image_format.upper()
+        IMG_FORMATS = {
+            "JPG": {"RGBA": "RGB", "LA": "L", "P": "RGB"},
+            "JPEG": {"RGBA": "RGB", "LA": "L", "P": "RGB"},
+        }
+        destination_mode = IMG_FORMATS.get(formato,{}).get(image.mode, image.mode)
+        IMG_CONVERT = image.convert(destination_mode)
+        buffer = BytesIO()
+        try:
+            IMG_CONVERT.save(buffer, format=formato)
+            return buffer.getvalue()
+        except Exception as exc:
+            raise NotImplementedFeature("Encode image") from exc

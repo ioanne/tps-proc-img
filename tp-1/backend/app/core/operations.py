@@ -13,9 +13,11 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps
+import cv2
+import numpy as np
 
-from app.core.exceptions import NotImplementedFeature
+from app.core.exceptions import NotImplementedFeature, InvalidParameters
 
 
 class Operation(ABC):
@@ -36,11 +38,12 @@ class Operation(ABC):
 class Brightness(Operation):
     name = "brightness"
 
+
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Brightness")
+        return ImageEnhance.Brightness(image).enhance(self._parameters["factor"])
 
 
 class Contrast(Operation):
@@ -50,7 +53,7 @@ class Contrast(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+        return ImageEnhance.Contrast(image).enhance(self._parameters["factor"])
 
 
 class Saturation(Operation):
@@ -60,7 +63,7 @@ class Saturation(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
+        return ImageEnhance.Color(image).enhance(self._parameters["factor"])
 
 
 class Sharpness(Operation):
@@ -70,7 +73,7 @@ class Sharpness(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+        return ImageEnhance.Sharpness(image).enhance(self._parameters["factor"])
 
 
 class Grayscale(Operation):
@@ -80,18 +83,31 @@ class Grayscale(Operation):
         super().__init__()
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        return ImageOps.grayscale(image)
 
 
 class Blur(Operation):
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
+        if kernel_size % 2 == 0 or kernel_size < 1:
+            raise InvalidParameters("Kernel size must be a positive odd integer.")
         super().__init__(method=method, kernel_size=kernel_size)
+        self._method = method.lower()
+        self._kernel_size = kernel_size
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        pixels = np.array(image)
+        kernel = self._kernel_size
+
+        if self._method == "gaussian":
+            result = cv2.GaussianBlur(pixels, (kernel, kernel), 0)
+        elif self._method == "average":
+            result = cv2.blur(pixels, (kernel, kernel))
+        else:
+            result = cv2.medianBlur(pixels, kernel)
+
+        return Image.fromarray(result)
 
 
 class Edges(Operation):
