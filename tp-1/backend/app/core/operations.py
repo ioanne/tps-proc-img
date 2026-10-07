@@ -191,6 +191,8 @@ class Resize(Operation):
 
     def __init__(self, width: int, height: int | None = None, keep_aspect_ratio: bool = True) -> None:
         # TODO: domain rule, height is required if keep_aspect_ratio is false.
+        if not keep_aspect_ratio and height is None:
+            raise InvalidParameters("La altura es obligatoria cuando se desactiva 'Mantener Relación de Aspecto'")
         super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
         self.width = width
         self.height = height
@@ -200,11 +202,8 @@ class Resize(Operation):
         original_width, original_height = image.size
 
         if self.keep_aspect_ratio:
-            if self.height is None:
-                new_height = int(original_height * self.width / original_width)
-            else:
-                new_height = self.height
-                new_width = int(original_width * self.height / original_height)
+            new_height = self.height
+            new_width = int(original_width * self.height / original_height)
         else:
             new_width = self.width
             new_height = self.height
