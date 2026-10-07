@@ -11,9 +11,9 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cv2, np
 
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps
 
 from app.core.exceptions import NotImplementedFeature
 
@@ -36,11 +36,12 @@ class Operation(ABC):
 class Brightness(Operation):
     name = "brightness"
 
+
     def __init__(self, factor: float = 1.0) -> None:
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Brightness")
+        return ImageEnhance.Brightness(image).enhance(self._parameters["factor"])   
 
 
 class Contrast(Operation):
@@ -50,7 +51,7 @@ class Contrast(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+        return ImageEnhance.Contrast(image).enhance(self._parameters["factor"])
 
 
 class Saturation(Operation):
@@ -60,7 +61,7 @@ class Saturation(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
+        return ImageEnhance.Color(image).enhance(self._parameters["factor"])
 
 
 class Sharpness(Operation):
@@ -70,7 +71,7 @@ class Sharpness(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+        return ImageEnhance.Sharpness(image).enhance(self._parameters["factor"])
 
 
 class Grayscale(Operation):
@@ -80,7 +81,7 @@ class Grayscale(Operation):
         super().__init__()
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        return ImageOps.grayscale(image)
 
 
 class Blur(Operation):
@@ -91,7 +92,7 @@ class Blur(Operation):
         super().__init__(method=method, kernel_size=kernel_size)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        return cv2.GaussianBlur(np.array(image), (self._parameters["kernel_size"], self._parameters["kernel_size"]), 0)
 
 
 class Edges(Operation):
