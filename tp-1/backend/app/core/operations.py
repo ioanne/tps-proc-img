@@ -11,11 +11,13 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, cv2, np
+from typing import Any, ClassVar
 
 from PIL import Image, ImageEnhance, ImageOps
+import cv2
+import numpy as np
 
-from app.core.exceptions import NotImplementedFeature
+from app.core.exceptions import NotImplementedFeature, InvalidParameters
 
 
 class Operation(ABC):
@@ -88,11 +90,28 @@ class Blur(Operation):
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
+        if kernel_size % 2 == 0 or kernel_size < 1:
+            raise InvalidParameters(
+                "Kernel size must be a positive odd integer."
+            )
+
         super().__init__(method=method, kernel_size=kernel_size)
 
+        self._method = method.lower()
+        self._kernel_size = kernel_size
+
     def apply(self, image: Image.Image) -> Image.Image:
-        return cv2.GaussianBlur(np.array(image), (self._parameters["kernel_size"], self._parameters["kernel_size"]), 0)
+        pixels = np.array(image)
+        kernel = self._kernel_size
+
+        if self._method == "gaussian":
+            result = cv2.GaussianBlur(pixels, (kernel, kernel), 0)
+        elif self._method == "average":
+            result = cv2.blur(pixels, (kernel, kernel))
+        else:
+            result = cv2.medianBlur(pixels, kernel)
+
+        return Image.fromarray(result)
 
 
 class Edges(Operation):
@@ -103,7 +122,7 @@ class Edges(Operation):
         super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Edge detection")
+       return Image.fromarray(cv2.Canny(np.array(image), self._parameters["lower_threshold"], self._parameters["upper_threshold"]))
 
 
 class Rotation(Operation):
