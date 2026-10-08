@@ -1,18 +1,14 @@
 # TP 1 - Procesamiento de Imágenes
 
+## ¿De qué trata?
 
-En este trabajo práctico trabajamos sobre un editor de imágenes y completamos la parte del backend encargada de realizar las distintas operaciones sobre las imágenes.
+Este trabajo consiste en implementar diferentes operaciones de procesamiento de imágenes utilizando Python, Pillow y OpenCV.
 
-Para hacerlo usamos principalmente **Pillow** y **OpenCV**, siguiendo la estructura que ya tenía armado el proyecto.
+La idea fue completar la lógica del procesamiento en el backend, respetando la estructura que ya tenía el proyecto y manteniendo separada la lógica de imágenes de la API.
 
-El trabajo se centró principalmente en estos dos archivos:
+## ¿Qué hicimos?
 
-- `app/core/imaging.py`
-- `app/core/operations.py`
-
-En `imaging.py` agregamos las funciones necesarias para convertir imágenes entre Pillow y OpenCV, ya que algunas operaciones se realizan más cómodamente utilizando una librería u otra.
-
-En `operations.py` implementamos las 10 operaciones que pedía el TP:
+Completamos las operaciones principales de procesamiento de imágenes:
 
 - Brillo
 - Contraste
@@ -23,130 +19,171 @@ En `operations.py` implementamos las 10 operaciones que pedía el TP:
 - Detección de bordes
 - Rotación
 - Espejado
-- Redimensionamiento
+- Redimensionado
 
-También agregamos las validaciones necesarias para los parámetros de las operaciones. Por ejemplo, el tamaño del kernel utilizado en el desenfoque tiene que ser impar y, para la detección de bordes, el límite inferior tiene que ser menor que el superior.
+También completamos la conversión entre imágenes de Pillow y OpenCV para poder utilizar ambas librerías según la operación.
 
+Además, agregamos validaciones para los parámetros que pueden generar errores.
 
-*##  Pruebas*
+## Pruebas
 
-Para comprobar que lo que hicimos funcionara correctamente, además de las pruebas que ya venían con el proyecto agregamos nuestras propias pruebas.
+Se realizaron pruebas unitarias y pruebas de validación para comprobar que las operaciones funcionen correctamente.
 
-Los archivos que agregamos fueron:
-
-```text
-tests/test_operations_unit.py
-tests/test_operations_validation.py
-tests/test_codec.py
-
-*## ¿Qué partes del código modificamos?*
+## ¿Qué partes del código modificamos?
 
 ### `app/core/imaging.py`
 
-En este archivo agregamos las funciones:
+Se agregaron las funciones necesarias para convertir imágenes entre Pillow y OpenCV.
+
+#### `pil_to_cv2()`
+
+Convierte una imagen de Pillow a un array de OpenCV.
+
+Se tiene en cuenta la conversión de imágenes RGB y RGBA para mantener correctamente los canales.
+
+#### `cv2_to_pil()`
+
+Realiza la conversión inversa, pasando un array de OpenCV nuevamente a una imagen de Pillow.
+
+También contempla los modos RGB y RGBA.
+
+Estas funciones permiten utilizar Pillow y OpenCV dentro de las diferentes operaciones sin repetir la lógica de conversión.
+
+---
+
+### `app/core/operations.py`
+
+En este archivo se implementaron las operaciones de procesamiento.
+
+#### `Operation`
+
+Es la clase abstracta base de todas las operaciones.
+
+Define la estructura común y el método:
 
 ```python
-pil_to_cv2()
-cv2_to_pil()
+apply(image)
+```
 
-Las usamos para poder pasar una imagen de Pillow a OpenCV y volver a convertirla a Pillow cuando termina el procesamiento.
+Cada operación concreta implementa este método.
 
-También se completaron las funciones del ImageCodec que se encargan de abrir y guardar las imágenes:
-ImageCodec.open()
-ImageCodec.encode()
+#### `EnhanceOperation`
 
-open() recibe los bytes de una imagen y la prepara para que pueda ser procesada, normalizando los modos de color a L, RGB o RGBA.
+Es una clase base utilizada para las operaciones que utilizan `ImageEnhance` de Pillow.
 
-encode() hace el proceso inverso: toma la imagen procesada y la convierte nuevamente en bytes para poder guardarla. También tiene en cuenta casos como guardar una imagen RGBA en formato JPEG, donde primero hay que convertirla a RGB.
+A partir de ella se implementaron:
 
-##app/core/operations.py
-En este archivo implementamos las operaciones que faltaban.
-Primero dejamos la clase base:
-Operation
-y agregamos una clase auxiliar:
-EnhanceOperation
-Esta última nos permitió reutilizar la misma lógica para las operaciones que utilizan ImageEnhance de Pillow.
+- `Brightness`
+- `Contrast`
+- `Saturation`
+- `Sharpness`
 
-Brillo, contraste, saturación y nitidez
-Se implementaron:
-Brightness
-Contrast
-Saturation
-Sharpness
+Cada una recibe un factor y aplica la mejora correspondiente sobre la imagen.
 
-Cada una utiliza la clase correspondiente de ImageEnhance:
-ImageEnhance.Brightness
-ImageEnhance.Contrast
-ImageEnhance.Color
-ImageEnhance.Sharpness
+#### `Brightness`
 
-Todas reciben un factor y aplican el cambio sobre la imagen.
+Utiliza `ImageEnhance.Brightness` para modificar el brillo.
 
-Escala de grises
-Se implementó:
-Grayscale.apply()
+#### `Contrast`
 
-Para esta operación utilizamos OpenCV y convertimos la imagen a modo L.
+Utiliza `ImageEnhance.Contrast` para modificar el contraste.
 
-Desenfoque
-Se implementó:
-Blur.apply()
+#### `Saturation`
 
-Permite trabajar con tres métodos:
-gaussian
-median
-average
+Utiliza `ImageEnhance.Color` para modificar la saturación.
 
-Para realizar los filtros utilizamos las funciones correspondientes de OpenCV.
-También agregamos una validación en el constructor de Blur para comprobar que el tamaño del kernel sea impar.
+#### `Sharpness`
 
+Utiliza `ImageEnhance.Sharpness` para modificar la nitidez.
 
-Detección de bordes
-Se implementó:
-Edges.apply()
+#### `Grayscale.apply()`
 
-Utilizando:
-cv2.Canny()
+Convierte la imagen a escala de grises.
 
-Rotación
-Se implementó:
-Rotation.apply()
+Se utiliza OpenCV para realizar la conversión y el resultado se devuelve en modo `L`.
 
-utilizando el método rotate() de Pillow.
+#### `Blur.apply()`
 
-Se tiene en cuenta el modo de la imagen para definir el color de relleno y, en el caso de RGBA, se utiliza transparencia.
+Implementa los diferentes tipos de desenfoque:
 
-Espejado
-Se implementó:
-Mirror.apply()
+- Gaussian
+- Median
+- Average
 
-Para el espejado horizontal utilizamos:
+Para estas operaciones se utiliza OpenCV.
+
+También se valida que el tamaño del kernel sea impar.
+
+#### `Edges.apply()`
+
+Realiza la detección de bordes mediante `cv2.Canny()`.
+
+Recibe:
+
+- `lower_threshold`
+- `upper_threshold`
+
+y valida que el umbral inferior sea menor que el superior.
+
+El resultado se devuelve en escala de grises.
+
+#### `Rotation.apply()`
+
+Realiza la rotación de la imagen utilizando Pillow.
+
+Se permite indicar el ángulo y si se debe expandir el resultado para conservar toda la imagen.
+
+Cuando corresponde, se utiliza un fondo transparente o negro.
+
+#### `Mirror.apply()`
+
+Permite espejar la imagen horizontal o verticalmente.
+
+Para esto se utilizan:
+
+```python
 ImageOps.mirror()
+```
 
-y para el vertical:
+y
+
+```python
 ImageOps.flip()
+```
 
+#### `Resize.apply()`
 
-Redimensionamiento
-Se implementó:
-Resize.apply()
+Permite cambiar el tamaño de la imagen.
 
-Permite indicar solamente el ancho cuando se quiere conservar la relación de aspecto, calculando automáticamente el alto.
+Si se mantiene la relación de aspecto, la altura se calcula automáticamente a partir del nuevo ancho.
 
-También permite indicar ancho y alto cuando no se quiere conservar la proporción.
+También permite indicar ancho y alto de forma independiente cuando no se quiere mantener la relación de aspecto.
 
-*## Tests que agregamos*
-Para comprobar los cambios agregamos:
-tests/test_operations_unit.py
-tests/test_operations_validation.py
-tests/test_codec.py
+---
 
-test_operations_unit.py prueba las 10 operaciones.
-test_operations_validation.py prueba los casos en los que los parámetros no son válidos.
-test_codec.py prueba ImageCodec y las conversiones entre Pillow y OpenCV.
+## Tests agregados
 
-*## Integrantes*
+Se agregaron pruebas específicas para comprobar tanto el funcionamiento de las operaciones como sus validaciones.
+
+### `tests/test_operations_unit.py`
+
+Contiene pruebas para las diferentes operaciones de procesamiento.
+
+### `tests/test_operations_validation.py`
+
+Contiene pruebas para casos inválidos, por ejemplo:
+
+- Kernel par en `Blur`
+- Umbrales invertidos o iguales en `Edges`
+- Falta de altura en `Resize` cuando no se mantiene la relación de aspecto
+
+### `tests/test_codec.py`
+
+Contiene pruebas relacionadas con la apertura y codificación de imágenes y con las conversiones RGB y RGBA.
+
+## Integrantes
 
 - Eric Silvestri
 - Lucas Suarez
 - Walter Willich
+
