@@ -30,10 +30,10 @@ Todos los test fueron pasados positivamente
 
 ## Integrantes
 
--Rocío
--Pablo
--Gastón
--Nina
+-Abigail Nina
+-Gastón Ramirez
+-Pablo Speranza
+-Rocío Vázquez
 
 ## Descripción
 
