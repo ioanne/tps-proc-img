@@ -76,7 +76,7 @@ Para ejecutarlos:
 ```bash
 pytest tests/test_operations.py -v
 pytest tests/test_codec.py -v
-
+```
 
 ## Diagrama de clases
 
