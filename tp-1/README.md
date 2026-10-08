@@ -31,4 +31,6 @@ trabajo del equipo es implementar esas clases y lograr que pasen todos.
 
 ## Integrantes
 
-- _completar_
+- Blanco, Griselda
+- Fava, Fernanda
+- Toto, Ignacio
