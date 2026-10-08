@@ -43,7 +43,7 @@ class Brightness(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Brightness")
+        return ImageEnhance.Brightness(image).enhance(self._parameters["factor"])
 
 
 class Contrast(Operation):
@@ -90,11 +90,9 @@ class Blur(Operation):
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
+        if kernel_size % 2 == 0 or kernel_size < 1:
+            raise InvalidParameters("Kernel size must be a positive odd integer.")
         super().__init__(method=method, kernel_size=kernel_size)
-        self._method = method.lower()
-        self._kernel_size = kernel_size
-
         self._method = method.lower()
         self._kernel_size = kernel_size
 
@@ -115,15 +113,12 @@ class Blur(Operation):
 class Edges(Operation):
     name = "edges"
 
-    def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
-        if not 0 <= lower_threshold < upper_threshold <= 255:
-            raise InvalidParameters(
-                "Thresholds must satisfy 0 <= lower_threshold < upper_threshold <= 255."
-            )
-        super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
+    def init(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
+        # TODO: domain rule, lower_threshold < upper_threshold.
+        super().init(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Edge detection")
+       return Image.fromarray(cv2.Canny(np.array(image), self._parameters["lower_threshold"], self._parameters["upper_threshold"]))
 
 
 class Rotation(Operation):
@@ -171,9 +166,48 @@ class Mirror(Operation):
 class Resize(Operation):
     name = "resize"
 
-    def __init__(self, width: int, height: int | None = None, keep_aspect_ratio: bool = True) -> None:
-        # TODO: domain rule, height is required if keep_aspect_ratio is false.
-        super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
+    def init(
+        self,
+        width: int,
+        height: int | None = None,
+        keep_aspect_ratio: bool = False,
+    ) -> None:
 
+        if width <= 0:
+            raise InvalidParameters("Width must be positive.")
+
+        if not keep_aspect_ratio:
+            if height is None or height <= 0:
+                raise InvalidParameters(
+                    "Height must be a positive integer."
+                )
+
+        super().init(
+            width=width,
+            height=height,
+            keep_aspect_ratio=keep_aspect_ratio,
+        )
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Resize")
+        width = self._parameters["width"]
+        height = self._parameters["height"]
+
+        if self._parameters["keep_aspect_ratio"]:
+            height = max(1, round(width * image.height / image.width))
+        elif height is None:
+            raise InvalidParameters(
+                "Height is required when keep_aspect_ratio is false."
+            )
+
+        interpolation = (
+            cv2.INTER_AREA
+            if width <= image.width and height <= image.height
+            else cv2.INTER_CUBIC
+        )
+
+        pixels = np.asarray(image)
+        resized = cv2.resize(
+            pixels,
+            (width, height),
+            interpolation=interpolation,
+        )
+        return Image.fromarray(resized)
