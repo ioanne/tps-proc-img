@@ -47,6 +47,17 @@ class ImageCodec:
             raise NotImplementedFeature("Open image") from exc
 
     def encode(self, image: Image.Image, image_format: str) -> bytes:
-        """Encodes `image` in `image_format`, converting its color mode if that format
-        cannot store it (e.g. RGBA in JPEG)."""
-        raise NotImplementedFeature("Encode image")
+        """Encodes image in image_format, converting its color mode if that format cannot store it (e.g. RGBA in JPEG)."""
+        formato = image_format.upper()
+        IMG_FORMATS = {
+            "JPG": {"RGBA": "RGB", "LA": "L", "P": "RGB"},
+            "JPEG": {"RGBA": "RGB", "LA": "L", "P": "RGB"},
+        }
+        destination_mode = IMG_FORMATS.get(formato,{}).get(image.mode, image.mode)
+        IMG_CONVERT = image.convert(destination_mode)
+        buffer = BytesIO()
+        try:
+            IMG_CONVERT.save(buffer, format=formato)
+            return buffer.getvalue()
+        except Exception as exc:
+            raise NotImplementedFeature("Encode image") from exc
