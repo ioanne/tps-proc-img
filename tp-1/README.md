@@ -55,6 +55,16 @@ Las operaciones disponibles son:
 - Espejo
 - Redimensionamiento
 
+## Decisiones de diseño
+
+### Polimorfismo y patrón Strategy
+
+`Operation` define el contrato común de las operaciones de edición. Cada operación concreta, como `Brightness`, `Blur` o `Mirror`, hereda de esa clase e implementa su propio método `apply(image)`.
+
+El servicio recibe una operación y llama a su método `apply`, sin tener que decidir mediante una cadena de `if/elif` cuál transformación ejecutar. Este diseño usa polimorfismo y se relaciona con el patrón Strategy: cada clase encapsula una forma diferente de procesar la imagen, pero todas se utilizan mediante el mismo contrato.
+
+De esta manera, para agregar una operación nueva alcanza con crear otra subclase de `Operation`; no es necesario modificar el servicio para que reconozca su nombre. Además, cada clase concentra la lógica y las validaciones propias de su operación.
+
 ## Tests propios
 
 Además de los tests de aceptación provistos por la cátedra, se agregaron tests unitarios propios para verificar el comportamiento del core.
