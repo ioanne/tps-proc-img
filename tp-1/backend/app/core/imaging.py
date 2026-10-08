@@ -56,10 +56,16 @@ class ImageCodec:
     def encode(self, image: Image.Image, image_format: str) -> bytes:
         """Encodes `image` in `image_format`, converting its color mode if that format
         cannot store it (e.g. RGBA in JPEG)."""
+
+        image_format = image_format.upper()
+
         if image_format == "JPEG" and image.mode not in ("L", "RGB"):
             image = image.convert("RGB")
+
         elif image.mode not in ("L", "RGB", "RGBA"):
             image = image.convert("RGBA" if "A" in image.mode else "RGB")
+
         buffer = BytesIO()
         image.save(buffer, format=image_format)
         return buffer.getvalue()
+

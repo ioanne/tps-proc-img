@@ -67,7 +67,13 @@ class Brightness(Operation):
         self.factor = factor
 
     def apply(self, image: Image.Image) -> Image.Image:
-        return ImageEnhance.Brightness(image).enhance(self.factor)
+        factor = self._parameters["factor"]
+        if image.mode == "RGBA":
+            alpha = image.getchannel("A")
+            enhanced = ImageEnhance.Brightness(image.convert("RGB")).enhance(factor)
+            enhanced.putalpha(alpha)
+            return enhanced
+        return ImageEnhance.Brightness(image).enhance(factor)
 
 
 class Contrast(Operation):
@@ -77,7 +83,20 @@ class Contrast(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Contrast")
+        factor = self._parameters["factor"]
+        if image.mode == "RGBA":
+            alpha = image.getchannel("A")
+            enhanced = ImageEnhance.Contrast(image.convert("RGB")).enhance(factor)
+            enhanced.putalpha(alpha)
+            return enhanced
+        if image.mode == "P":
+            image = image.convert("RGBA" if "transparency" in image.info else "RGB")
+            if image.mode == "RGBA":
+                alpha = image.getchannel("A")
+                enhanced = ImageEnhance.Contrast(image.convert("RGB")).enhance(factor)
+                enhanced.putalpha(alpha)
+                return enhanced
+        return ImageEnhance.Contrast(image).enhance(factor)
 
 
 class Saturation(Operation):
@@ -87,7 +106,20 @@ class Saturation(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Saturation")
+        factor = self._parameters["factor"]
+        if image.mode == "RGBA":
+            alpha = image.getchannel("A")
+            enhanced = ImageEnhance.Color(image.convert("RGB")).enhance(factor)
+            enhanced.putalpha(alpha)
+            return enhanced
+        if image.mode == "P":
+            image = image.convert("RGBA" if "transparency" in image.info else "RGB")
+            if image.mode == "RGBA":
+                alpha = image.getchannel("A")
+                enhanced = ImageEnhance.Color(image.convert("RGB")).enhance(factor)
+                enhanced.putalpha(alpha)
+                return enhanced
+        return ImageEnhance.Color(image).enhance(factor)
 
 
 class Sharpness(Operation):
@@ -97,7 +129,20 @@ class Sharpness(Operation):
         super().__init__(factor=factor)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Sharpness")
+        factor = self._parameters["factor"]
+        if image.mode == "RGBA":
+            alpha = image.getchannel("A")
+            enhanced = ImageEnhance.Sharpness(image.convert("RGB")).enhance(factor)
+            enhanced.putalpha(alpha)
+            return enhanced
+        if image.mode == "P":
+            image = image.convert("RGBA" if "transparency" in image.info else "RGB")
+            if image.mode == "RGBA":
+                alpha = image.getchannel("A")
+                enhanced = ImageEnhance.Sharpness(image.convert("RGB")).enhance(factor)
+                enhanced.putalpha(alpha)
+                return enhanced
+        return ImageEnhance.Sharpness(image).enhance(factor)
 
 
 class Grayscale(Operation):
@@ -107,7 +152,7 @@ class Grayscale(Operation):
         super().__init__()
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Grayscale")
+        return image.convert("L")
 
 
 class Blur(Operation):
