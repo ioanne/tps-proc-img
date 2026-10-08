@@ -153,7 +153,14 @@ class Mirror(Operation):
         super().__init__(direction=direction)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Mirror")
+        direction = self._parameters["direction"]
+
+        if direction == "horizontal":
+            return ImageOps.mirror(image)
+        if direction == "vertical":
+            return ImageOps.flip(image)
+
+        raise InvalidParameters("Direction must be horizontal or vertical.")
 
 
 class Resize(Operation):
