@@ -10,7 +10,7 @@ in the constructor (raising `InvalidParameters`) and implements `apply`.
 The constructor arguments match the fields of the schemas in `app/schemas.py`.
 """
 
-import cv2 #PARA ALGUNSO CAMBIOS LOS NECESITO
+import cv2 #PARA ALGUNOS CAMBIOS LOS NECESITO
 import numpy as np
 
 from abc import ABC, abstractmethod
@@ -96,6 +96,13 @@ class Brightness(Operation):
 
 
 class Contrast(Operation):
+    """Ajusta el contraste de la imagen según `factor`.
+
+    El contraste es la diferencia entre las zonas claras y las oscuras.
+    0 = imagen gris uniforme, 1.0 = sin cambios, mayor a 1 = más contraste.
+    Usa ImageEnhance.Contrast de Pillow.
+    """
+
     name = "contrast"
 
     def __init__(self, factor: float = 1.0) -> None:
@@ -106,6 +113,12 @@ class Contrast(Operation):
 
 
 class Saturation(Operation):
+    """Ajusta la saturación (intensidad de los colores) según `factor`.
+
+    0 = blanco y negro, 1.0 = sin cambios, mayor a 1 = colores más vivos.
+    Usa ImageEnhance.Color de Pillow.
+    """
+
     name = "saturation"
 
     def __init__(self, factor: float = 1.0) -> None:
@@ -116,6 +129,12 @@ class Saturation(Operation):
 
 
 class Sharpness(Operation):
+    """Ajusta la nitidez de la imagen según `factor`.
+
+    Menor a 1 = más borrosa, 1.0 = sin cambios, mayor a 1 = bordes más marcados.
+    Usa ImageEnhance.Sharpness de Pillow.
+    """
+
     name = "sharpness"
 
     def __init__(self, factor: float = 1.0) -> None:
@@ -126,6 +145,12 @@ class Sharpness(Operation):
 
 
 class Grayscale(Operation):
+    """Convierte la imagen a escala de grises (blanco y negro).
+
+    No recibe parámetros. El resultado tiene un solo canal (modo "L"),
+    donde cada píxel es un valor de brillo entre 0 (negro) y 255 (blanco).
+    """
+
     name = "grayscale"
 
     def __init__(self) -> None:
@@ -136,6 +161,17 @@ class Grayscale(Operation):
 
 
 class Blur(Operation): #con OpenCV
+    """Desenfoca la imagen usando OpenCV.
+
+    Parámetros:
+      - method: "gaussian" (suave y natural), "median" (bueno para quitar
+        ruido tipo puntitos) o "box" (promedio simple de los vecinos).
+      - kernel_size: tamaño de la ventana de píxeles vecinos que se usa.
+        Tiene que ser impar para que exista un píxel central; si es par se
+        lanza InvalidParameters. Con 1 la imagen queda igual.
+    Cuanto más grande el kernel, más borrosa queda la imagen.
+    """
+
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
@@ -171,6 +207,16 @@ class Blur(Operation): #con OpenCV
 
 
 class Edges(Operation):
+    """Detecta los bordes de la imagen con el algoritmo de Canny (OpenCV).
+
+    Primero pasa la imagen a gris y después marca en blanco los bordes
+    y en negro el resto.
+      - lower_threshold / upper_threshold: umbrales del algoritmo. Los cambios
+        de intensidad mayores al umbral alto son bordes seguros; los que están
+        entre ambos solo cuentan si están conectados a un borde seguro.
+    El umbral bajo tiene que ser menor que el alto (si no, InvalidParameters).
+    """
+
     name = "edges"
 
     def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
@@ -199,6 +245,14 @@ class Edges(Operation):
 
 
 class Rotation(Operation):
+    """Rota la imagen `angle` grados en sentido antihorario.
+
+      - expand: si es True, agranda el lienzo para que no se corte ninguna
+        parte de la imagen; si es False, mantiene el tamaño original.
+    Las esquinas que quedan vacías se rellenan con negro (o transparente
+    si la imagen tiene canal alfa, RGBA).
+    """
+
     name = "rotation"
 
     def __init__(self, angle: float = 90.0, expand: bool = True) -> None:
@@ -223,6 +277,12 @@ class Rotation(Operation):
 
 
 class Mirror(Operation):
+    """Refleja la imagen como un espejo.
+
+      - direction: "horizontal" da vuelta izquierda/derecha;
+        cualquier otro valor ("vertical") da vuelta arriba/abajo.
+    """
+
     name = "mirror"
 
     def __init__(self, direction: str = "horizontal") -> None:
@@ -238,6 +298,17 @@ class Mirror(Operation):
 
 
 class Resize(Operation):
+    """Cambia el tamaño de la imagen usando OpenCV.
+
+      - width: ancho nuevo en píxeles.
+      - height: alto nuevo (opcional si se mantiene la proporción).
+      - keep_aspect_ratio: si es True, el alto se calcula solo para que la
+        imagen no se deforme; si es False, `height` es obligatorio
+        (si falta, InvalidParameters).
+    Para achicar usa INTER_AREA (evita que se vea "pixelado") y para
+    agrandar usa INTER_CUBIC (da un resultado más suave).
+    """
+
     name = "resize"
 
     def __init__(
