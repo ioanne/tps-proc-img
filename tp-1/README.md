@@ -150,7 +150,7 @@ Pillow se utilizó principalmente para operaciones directas sobre color y transf
 - saturación con `ImageEnhance.Color`;
 - nitidez con `ImageEnhance.Sharpness`;
 - escala de grises con `ImageOps.grayscale`;
-- espejo con `ImageOps`;
+- espejo con `ImageOps.mirror` (horizontal) e `ImageOps.flip` (vertical);
 - rotación con `Image.rotate`.
 
 OpenCV se utilizó principalmente para operaciones de filtrado y procesamiento:
