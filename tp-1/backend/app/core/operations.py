@@ -15,7 +15,7 @@ from typing import Any, ClassVar
 
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 from app.core.exceptions import InvalidParameters, NotImplementedFeature
 
@@ -210,7 +210,9 @@ class Rotation(Operation):
         super().__init__(angle=angle, expand=expand)
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Rotation")
+        return image.rotate(
+        self._parameters["angle"],
+        expand=self._parameters["expand"],)
 
 
 class Mirror(Operation):
@@ -218,17 +220,49 @@ class Mirror(Operation):
 
     def __init__(self, direction: str = "horizontal") -> None:
         super().__init__(direction=direction)
-
+        
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Mirror")
+        # Todo este bloque debe llevar un nivel más de indentación
+        direction = self._parameters["direction"]
+
+        if direction == "horizontal":
+            result = ImageOps.mirror(image)
+        elif direction == "vertical":
+            result = ImageOps.flip(image)
+        else:
+            raise InvalidParameters(f"Unsupported mirror direction: {direction}")
+
+        return result
 
 
 class Resize(Operation):
     name = "resize"
 
-    def __init__(self, width: int, height: int | None = None, keep_aspect_ratio: bool = True) -> None:
-        # TODO: domain rule, height is required if keep_aspect_ratio is false.
-        super().__init__(width=width, height=height, keep_aspect_ratio=keep_aspect_ratio)
+    def __init__(
+        self,
+        width: int,
+        height: int | None = None,
+        keep_aspect_ratio: bool = True,
+    ) -> None:
+        if not keep_aspect_ratio and height is None:
+            raise InvalidParameters("height is required when keep_aspect_ratio is false.")
+
+        super().__init__(
+            width=width,
+            height=height,
+            keep_aspect_ratio=keep_aspect_ratio,
+        )
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Resize")
+        width = self._parameters["width"]
+        height = self._parameters["height"]
+
+        if self._parameters["keep_aspect_ratio"]:
+            target_height = round(width * image.height / image.width)
+        elif height is not None:
+            target_height = height
+        else:
+            raise InvalidParameters("height is required when keep_aspect_ratio is false.")
+
+        result = image.resize((width, target_height), Image.Resampling.LANCZOS)
+        return result
