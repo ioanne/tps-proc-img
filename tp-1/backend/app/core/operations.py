@@ -13,9 +13,11 @@ The constructor arguments match the fields of the schemas in `app/schemas.py`.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from PIL import Image, ImageEnhance
+import cv2
+import numpy as np
+from PIL import Image, ImageEnhance, ImageFilter
 
-from app.core.exceptions import NotImplementedFeature
+from app.core.exceptions import InvalidParameters, NotImplementedFeature
 
 
 class Operation(ABC):
@@ -159,22 +161,46 @@ class Blur(Operation):
     name = "blur"
 
     def __init__(self, method: str = "gaussian", kernel_size: int = 5) -> None:
-        # TODO: domain rule, kernel_size must be odd.
+        if kernel_size % 2 == 0:
+            raise InvalidParameters("kernel_size must be odd.")
+
         super().__init__(method=method, kernel_size=kernel_size)
+        self.method = method
+        self.kernel_size = kernel_size
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Blur")
+        radius = (self.kernel_size - 1) / 2
+
+        if self.method == "gaussian":
+            image_filter = ImageFilter.GaussianBlur(radius=radius)
+        elif self.method == "average":
+            image_filter = ImageFilter.BoxBlur(radius=radius)
+        elif self.method == "median":
+            image_filter = ImageFilter.MedianFilter(size=self.kernel_size)
+        else:
+            raise InvalidParameters(f"Unsupported blur method: {self.method}")
+
+        return image.filter(image_filter)
 
 
 class Edges(Operation):
     name = "edges"
 
     def __init__(self, lower_threshold: int = 100, upper_threshold: int = 200) -> None:
-        # TODO: domain rule, lower_threshold < upper_threshold.
-        super().__init__(lower_threshold=lower_threshold, upper_threshold=upper_threshold)
+        if lower_threshold >= upper_threshold:
+            raise InvalidParameters("lower_threshold must be less than upper_threshold.")
+
+        super().__init__(
+            lower_threshold=lower_threshold,
+            upper_threshold=upper_threshold,
+        )
+        self.lower_threshold = lower_threshold
+        self.upper_threshold = upper_threshold
 
     def apply(self, image: Image.Image) -> Image.Image:
-        raise NotImplementedFeature("Edge detection")
+        grayscale = np.asarray(image.convert("L"))
+        edges = cv2.Canny(grayscale, self.lower_threshold, self.upper_threshold)
+        return Image.fromarray(edges)
 
 
 class Rotation(Operation):
