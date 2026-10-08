@@ -137,7 +137,7 @@ classDiagram
     ImageService --> Operation
     ImageService --> FileStorage
     ImageService --> ImageDAL
-
+```
 
 ## Uso de Pillow y OpenCV
 
