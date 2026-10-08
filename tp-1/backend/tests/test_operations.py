@@ -83,7 +83,7 @@ def test_edges_returns_binary_grayscale_image():
     operation = Edges(lower_threshold=100, upper_threshold=200)
     result = operation.apply(image)
 
-    values = set(result.getdata())
+    values = set(result.get_flattened_data())
 
     assert result.mode == "L"
     assert values.issubset({0, 255})
