@@ -26,7 +26,7 @@ La API base fue provista con los endpoints, el modelo ORM, las consultas a la ba
 el manejo de archivos y el servicio principal.
 En este trabajo se completó el procesamiento de imágenes del core, incluyendo las diez
 operaciones requeridas, las validaciones de parámetros y los tests unitarios propios.
-Todos los test fueron pasados positivamente
+Todos los test pasaron correctamente
 
 ## Integrantes
 
@@ -161,7 +161,7 @@ OpenCV se utilizó principalmente para operaciones de filtrado y procesamiento:
 - detección de bordes con `cv2.Canny`;
 - redimensionamiento con `cv2.resize`.    
 
-##Conversión entre Pillow y OpenCV
+## Conversión entre Pillow y OpenCV
 
 Pillow y OpenCV utilizan distinto orden para los canales de color.
 
