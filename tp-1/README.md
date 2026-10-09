@@ -66,9 +66,9 @@ El servicio recibe una operación y llama a su método `apply`, sin tener que de
 De esta manera, para agregar una operación nueva alcanza con crear otra subclase de `Operation`; no es necesario modificar el servicio para que reconozca su nombre. Además, cada clase concentra la lógica y las validaciones propias de su operación.
 
 En el código, el servicio solo necesita hacer:
-
-python
+```python
 result = operation.apply(image)
+```
 
 Esa misma línea funciona para cualquiera de las diez operaciones.
 
