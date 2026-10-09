@@ -5,8 +5,12 @@ from fastapi import APIRouter, File, Form, UploadFile, status
 
 from app.schemas import ColorMode, ErrorOut, ScanOptions, ScanOut
 from app.uploads import read_upload
+from docscan.scanner import Scanner
+from app.repository import ScanRepository
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
+scanner = Scanner()
+repository = ScanRepository()
 
 
 def empty_scan(scan_id: str = "", original_name: str = "", options: ScanOptions | None = None) -> ScanOut:
@@ -33,21 +37,23 @@ async def create_scan(
 ):
     options = ScanOptions(color_mode=color_mode, color_correction=color_correction, soften_colors=soften_colors)
     upload = await read_upload(file)  # given: 413 FILE_TOO_LARGE / 400 INVALID_FILE / 400 UNSUPPORTED_FORMAT
-    # TODO (team): scan upload.photo.image with docscan, save the result (PNG), the original
-    # photo (upload.content) and the metadata, and return the saved scan.
-    return empty_scan(original_name=upload.name, options=options)
+    result = scanner.scan(
+        image=upload.photo.image,
+        color_mode=options.color_mode,
+        color_correction=options.color_correction,
+        soften_colors=options.soften_colors,
+    )
+    return repository.save(upload, result, options)
 
 
 @router.get("", response_model=list[ScanOut], summary="List the scans, newest first")
 def list_scans():
-    # TODO (team): read the saved scans.
-    return []
+   return repository.list()
 
 
 @router.get("/{scan_id}", response_model=ScanOut, summary="Get a scan", responses={404: {"model": ErrorOut}})
 def get_scan(scan_id: str):
-    # TODO (team): read the scan, or answer 404 SCAN_NOT_FOUND.
-    return empty_scan(scan_id)
+    return repository.get(scan_id)
 
 
 @router.delete(
@@ -57,5 +63,5 @@ def get_scan(scan_id: str):
     responses={404: {"model": ErrorOut}},
 )
 def delete_scan(scan_id: str):
-    # TODO (team): delete the files of the scan, or answer 404 SCAN_NOT_FOUND.
+    repository.delete(scan_id)
     return None
