@@ -22,12 +22,8 @@ cd backend
 pytest tests/test_contract.py -v
 ```
 
-La API ya está armada (endpoints, modelo ORM, consultas en `app/dal.py`, archivos en
-`app/core/storage.py`, el servicio en `app/core/service.py` y la subida de imágenes con
-`ImageCodec.inspect`). Falta el procesamiento de imágenes: `ImageCodec.open` y `ImageCodec.encode`
-en `app/core/imaging.py` y las diez operaciones en `app/core/operations.py`, que hoy
-responden **501 Not Implemented**. En el estado inicial los tests dan `121 failed, 32 passed`; el
-trabajo del equipo es implementar esas clases y lograr que pasen todos.
+La API, la persistencia, el almacenamiento y el procesamiento de imágenes están implementados.
+Los tests de aceptación se ejecutan con el comando anterior.
 
 ## Integrantes
 
