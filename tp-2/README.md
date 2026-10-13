@@ -5,7 +5,9 @@ fotografía, corregir su perspectiva y mejorar el resultado con filtros.
 
 La consigna completa está en [`enunciado.html`](enunciado.html).
 
-## Integrantes
+## Integrantes y rama del tp-2:
+ https://github.com/ioanne/tps-proc-img/tree/Lab03_01-griselda/tp-2
+
 Griselda Blanco
 Fernanda Fava
 Ignacio Toto
