@@ -1,0 +1,144 @@
+# TP 1 — Editor de imágenes con Pillow y OpenCV
+
+La consigna completa está en [`enunciado.html`](enunciado.html) (abrilo en el navegador).
+
+## Cómo correrlo
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8765
+```
+
+- Frontend: http://localhost:8765
+- Documentación de la API: http://localhost:8765/docs
+
+## Tests de aceptación
+
+```bash
+cd backend
+pytest tests/test_contract.py -v
+```
+
+## Implementación del procesamiento de imágenes
+
+Durante el desarrollo se investigó el flujo de la aplicación y sus distintas líneas de código.
+Al levantar el servidor apareció una excepción; al seguir el recorrido de las rutas y los servicios,
+se identificó que cada operación debía invocar un método de su clase correspondiente. Por eso se
+implementaron los métodos de procesamiento en `app/core/operations.py` y se conectaron con el flujo
+existente de la API. Este trabajo se realizó con apoyo de herramientas de IA.
+
+Quedaron implementadas las diez operaciones para editar imágenes:
+
+- Brillo y contraste.
+- Saturación y nitidez.
+- Escala de grises y desenfoque.
+- Detección de bordes.
+- Rotación y espejo.
+- Cambio de tamaño.
+
+Se probaron las operaciones con imágenes, incluyendo ajustes de contraste y rotación, para comprobar
+el resultado visual. La implementación está disponible en la rama
+[`Lab03_01-griselda`](https://github.com/ioanne/tps-proc-img/tree/Lab03_01-griselda/tp-1).
+
+
+La rama Lab03_01-griselda
+
+1. Comprobar que Git está instalado
+git --version
+Si aparece un número de versión, ya podés continuar.
+
+2. Clonar el repositorio. Se toma el nombre del repo y la ruta donde queres guardarlo:
+cd "$HOME\Documents"
+git clone https://github.com/ioanne/tps-proc-img.git
+
+Confirmar que estás dentro del repositorio con:
+cd .\tps-proc-img
+git status
+
+3. Revisar las ramas y crear una propia
+Primero, descargá la información más reciente de GitHub y mirá las ramas disponibles:
+git fetch origin
+git branch -a
+
+Para empezar tu trabajo desde main y crear una rama nueva:
+git switch main
+git pull --ff-only origin main
+git switch -c Lab03_02-griselda
+
+git switch main cambia a la rama principal.
+git pull actualiza esa rama con lo que está en GitHub.
+git switch -c ... crea una rama nueva y te cambia a ella.
+Comprobá cuál es tu rama actual:
+git branch
+La rama activa aparece con un asterisco (*).
+Importante: crear una rama local basada en main es el punto de partida para volver a resolver el trabajo por tu cuenta. Si en cambio querés partir del código ya corregido en la rama existente, usá estos comandos en lugar del paso anterior:
+git switch --track origin/Lab03_01-griselda
+git switch -c Lab03_02-griselda
+
+4. Entrar a la carpeta del trabajo
+El proyecto está dentro de tp-1:
+cd .\tp-1
+Ahí está el README.md, con las instrucciones del proyecto. Las operaciones de procesamiento están en backend\app\core\operations.py.
+
+5. Preparar el entorno y ejecutar las pruebas
+En PowerShell, desde tp-1, ejecutá:
+cd .\backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pytest tests/test_contract.py -v
+
+La primera vez se crea el entorno virtual y se instalan las dependencias. Cuando se active correctamente, suele aparecer (.venv) al inicio de la línea de PowerShell.
+Si PowerShell bloquea la activación del entorno, podés ejecutar este comando para permitirla solo en esa ventana:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Después volvé a activar:
+.\.venv\Scripts\Activate.ps1
+
+6. Hacer y probar tus cambios
+Trabajá en los archivos necesarios desde tu editor. Cada vez que quieras probar el contrato de la API, desde tp-1\backend ejecutá:
+pytest tests/test_contract.py -v
+
+Luego abrí estas direcciones en el navegador:
+Aplicación: http://localhost:8765
+Documentación de la API: http://localhost:8765/docs
+Para detener el servidor, volvé a PowerShell y presioná Ctrl+C
+
+7. Revisar y guardar los cambios con Git
+Volvé a la raíz del repositorio:
+cd ..\..
+Revisá qué archivos cambiaste:
+git status
+git diff
+
+Cuando estés conforme, agregá los cambios y creá un commit:
+git add .
+git commit -m "Implementa operaciones de procesamiento de imagen"
+
+Un commit guarda una versión de tu trabajo en la rama local. No sube los cambios a GitHub todavía.
+
+8. Subir tu rama a GitHub
+La primera vez que subas esa rama, ejecutá:
+git push -u origin Lab03_02-griselda
+Eso publica la rama en GitHub. Luego, si hacés más commits en la misma rama, alcanza con:
+git push
+
+9. Crear un Pull Request
+Después del push, GitHub suele mostrar un botón para crear un Pull Request. También podés ir al repositorio en GitHub, abrir la pestaña Pull requests y elegir New pull request.
+Seleccioná:
+
+base: main
+compare: Lab03_02-griselda
+Revisá los cambios y creá el Pull Request. Así proponés incorporar tu rama a main sin modificarla directamente.
+
+Comandos frecuentes para revisar dónde estás:
+git status
+git branch
+git log --oneline -5
+
+git status: muestra cambios pendientes.
+git branch: muestra las ramas locales y cuál está activa.
+git log --oneline -5: muestra los últimos cinco commits.
+
