@@ -21,9 +21,12 @@ frontend works from minute one.
 
 from abc import ABC, abstractmethod
 from typing import ClassVar
+from retro import PALETTES
+
 
 import cv2
 import numpy as np
+
 
 from retro.exceptions import StepNotImplemented
 from retro.palettes import LUMA, Palette
@@ -193,7 +196,12 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
     The distance is the euclidean distance in RGB (the squared distance gives
     the same order). On a tie, the first one of the palette wins.
     """
-    raise StepNotImplemented(4, "nearest_color")
+    #raise StepNotImplemented(4, "nearest_color")
+
+    differences = colors.astype(float) - color.astype(float) # 1. Convertir a float antes de restar para evitar que uint8 desborde
+    distances = np.sum(differences**2, axis=1) # 2. Calcular la distancia al cuadrado d^2 sumando sobre los canales RGB (axis=1)
+    return colors[np.argmin(distances)] # 3. Devolver la fila de la paleta con la distancia mínima (en empate gana el primero)
+             
 
 
 class PaletteMap(Step):
@@ -212,7 +220,12 @@ class PaletteMap(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(4, "PaletteMap")
+        height, width = image.shape[:2]
+        result = np.empty_like(image)  # mismo tamaño y dtype, sin inicializar
+        for y in range(height):
+            for x in range(width):
+                result[y, x] = nearest_color(image[y, x], self.colors)
+        return result
 
     def __repr__(self) -> str:
         return f"PaletteMap({self.palette.name})"
