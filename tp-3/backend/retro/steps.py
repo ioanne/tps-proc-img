@@ -22,6 +22,7 @@ frontend works from minute one.
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
+import cv2
 import numpy as np
 
 from retro.exceptions import StepNotImplemented
@@ -115,7 +116,13 @@ class SquareCrop(Step):
         return side, side
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(1, "SquareCrop")
+        #raise StepNotImplemented(1, "SquareCrop")
+        height, width = image.shape[:2] #image.shape devuelve (alto, ancho, 3). Con el corte [:2] se obtienen únicamente las dimensiones espaciales para hacer las cuentas del recorte
+        side = min(height, width)  # Encuentra el lado mas pequeño
+        top = (height - side) // 2 # Calcula cuántas filas se descartan en la parte superior
+        left = (width - side) // 2 # Calcula cuántas columnas se descartan del lado izquierdo, si la cantidad sobrante es impar (por ejemplo 3), asigna 1 a la izquierda y deja 2 a la derecha, cumpliendo la regla de recortar el sobrante impar a la derecha
+        return image[top : top + side, left : left + side] # Recorta y devuelve la porción central de la imagen con tamaño side × side
+
 
 
 class Shrink(Step):
@@ -139,8 +146,11 @@ class Shrink(Step):
         return self.size, self.size
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(2, "Shrink")
-
+        #raise StepNotImplemented(2, "Shrink")
+        return cv2.resize(
+            image, (self.size, self.size), interpolation=cv2.INTER_AREA #INTER_AREA superpone la cuadrícula de la imagen de destino sobre la imagen original
+        )
+    
     def __repr__(self) -> str:
         return f"Shrink({self.size})"
 
@@ -164,7 +174,9 @@ class Enlarge(Step):
         return height * self.factor, width * self.factor
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(3, "Enlarge")
+        #raise StepNotImplemented(3, "Enlarge")
+        expandir = np.repeat(image, self.factor, axis=1) # 1 representa columnas
+        return np.repeat(expandir, self.factor, axis=0) # 2 representa filas
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
