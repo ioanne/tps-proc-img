@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Retro Avatar — TP 3</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4' shape-rendering='crispEdges'%3E%3Crect width='4' height='4' fill='%230f380f'/%3E%3Crect x='1' y='1' width='2' height='2' fill='%239bbc0f'/%3E%3Crect x='1' y='2' width='1' height='1' fill='%23306230'/%3E%3Crect x='2' y='1' width='1' height='1' fill='%238bac0f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Retro Avatar</h1>
+        <p>TP 3 · From a photo to retro pixel art</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <a class="link" href="/docs" id="link-docs" target="_blank" rel="noopener">API docs</a>
+      <span class="status" id="server-status" data-status="checking">
+        <span class="dot"></span><span class="status-text">Checking server…</span>
+      </span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left column: the photo -->
+    <aside class="panel" aria-labelledby="photo-title">
+      <div class="panel-head">
+        <h2 id="photo-title">Photo</h2>
+      </div>
+
+      <label class="dropzone" id="dropzone" for="file-input">
+        <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16m-2-2 1.5-1.5a2 2 0 0 1 2.8 0L20 14M14 8h.01M6 20h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <strong>Upload a photo</strong>
+        <span>Drag it here or click · PNG, JPG, WEBP, BMP · max. 10 MB</span>
+      </label>
+
+      <div class="source-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-camera">Take a selfie</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-sample">Test image</button>
+      </div>
+
+      <div class="camera" id="camera" hidden>
+        <video id="camera-video" autoplay playsinline muted></video>
+        <div class="camera-actions">
+          <button type="button" class="btn btn-primary" id="btn-capture">Capture</button>
+          <button type="button" class="btn btn-ghost" id="btn-camera-cancel">Cancel</button>
+        </div>
+      </div>
+
+      <figure class="source" id="source" hidden>
+        <img id="source-img" alt="">
+        <figcaption id="source-meta"></figcaption>
+      </figure>
+    </aside>
+
+    <!-- Center: the avatar and every step of the pipeline -->
+    <section class="panel panel-view" aria-label="Avatar and pipeline">
+      <figure class="canvas">
+        <figcaption>
+          <span class="caption-label" id="view-label">Avatar</span>
+          <span class="meta" id="view-meta"></span>
+        </figcaption>
+        <div class="frame" id="view-frame">
+          <div class="empty">Upload a photo to get started</div>
+        </div>
+        <div class="notice" id="view-notice" hidden></div>
+        <div class="result-actions" id="view-actions" hidden>
+          <a class="btn btn-primary" id="btn-download" download>Download PNG</a>
+          <button type="button" class="btn btn-ghost" id="btn-show-last">Show the avatar</button>
+        </div>
+      </figure>
+
+      <div class="pipeline">
+        <div class="panel-head">
+          <h2>Pipeline</h2>
+          <span class="counter" id="pipeline-progress"></span>
+        </div>
+        <ol class="steps" id="steps">
+          <li class="notice">Each step of the pipeline will show up here, with its result.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Right column: options -->
+    <aside class="panel" aria-labelledby="options-title">
+      <div class="panel-head">
+        <h2 id="options-title">Options</h2>
+      </div>
+
+      <form class="form" id="options-form" novalidate>
+        <div class="fields">
+          <fieldset class="field">
+            <legend>Palette</legend>
+            <div class="palettes" id="palettes">
+              <div class="notice">Loading palettes…</div>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label>Pixels per side</label>
+            <div class="segmented" role="group" aria-label="Pixels per side" id="pixels">
+              <button type="button" data-value="16">16</button>
+              <button type="button" data-value="32">32</button>
+              <button type="button" data-value="64">64</button>
+              <button type="button" data-value="128">128</button>
+            </div>
+            <div class="help">Fewer pixels, chunkier avatar. The PNG is always 512×512.</div>
+          </div>
+
+          <div class="field field-check">
+            <label for="dithering">
+              <input type="checkbox" id="dithering">
+              Floyd–Steinberg dithering
+            </label>
+            <div class="help">Spreads the rounding error so few colors look like many.</div>
+          </div>
+
+          <div class="field">
+            <label for="frame">Frame <span class="value" id="frame-value"></span></label>
+            <input type="range" id="frame" min="0" max="4" step="1">
+            <div class="help">In big pixels, with the darkest color of the palette.</div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btn-reset">Reset</button>
+          <button type="submit" class="btn btn-primary" id="btn-make" disabled>Make avatar</button>
+        </div>
+      </form>
+
+      <details class="reuse">
+        <summary>Use it from any app</summary>
+        <p>The avatar maker is a plain HTTP API. The same options, from a terminal:</p>
+        <pre><code id="curl"></code></pre>
+      </details>
+    </aside>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="assertive"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
