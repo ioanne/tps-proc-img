@@ -171,7 +171,7 @@ class Enlarge(Step):
         return height * self.factor, width * self.factor
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(3, "Enlarge")
+        return cv2.resize(image, (image.shape[1] * self.factor, image.shape[0] * self.factor), interpolation=cv2.INTER_NEAREST)
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
