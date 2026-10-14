@@ -48,28 +48,36 @@ class ColorCorrectionFilter(Filter):
 
         return new_image
 
+
 class SoftenColorsFilter(Filter):
 
-    def __init__(self,factor: float):
+    def __init__(self, factor: float):
         self.factor = factor
 
-    def apply(self,image: np.ndarray) -> np.ndarray:
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        # Sin suavizado, conservar exactamente los píxeles.
+        if self.factor == 0:
+            return image.copy()
+
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        h,s,v = cv2.split(hsv_image)
+        h, s, v = cv2.split(hsv_image)
 
-        strength = (s/255.0)*(v/255.0)
-
+        strength = (s / 255.0) * (v / 255.0)
         adjust = strength * self.factor
 
-        s = np.clip (s*(1.0 - adjust), 0, 255).astype(np.uint8)
-        v = np.clip (v*(1.0 + adjust), 0, 255).astype(np.uint8)
+        s = np.clip(
+            s * (1.0 - adjust), 0, 255
+        ).astype(np.uint8)
+
+        v = np.clip(
+            v * (1.0 + adjust), 0, 255
+        ).astype(np.uint8)
 
         new_image = cv2.merge([h, s, v])
 
-        new_image = cv2.cvtColor(new_image, COLOR_HSV2BGR)
+        return cv2.cvtColor(new_image, cv2.COLOR_HSV2BGR)
 
-        return new_image
         
 
 
