@@ -276,7 +276,24 @@ class FloydSteinberg(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(6, "FloydSteinberg")
+        work = image.copy().astype(np.float64)           # una copia donde se va acumulando el error
+        result = np.empty_like(image)
+        height, width = image.shape[:2]
+        for y in range(height):
+            for x in range(width):
+                old = work[y, x]
+                new = nearest_color(work[y, x], self.colors)
+                result[y, x] = new
+                error = old - new
+                if x + 1 < width:
+                    work[y, x + 1] += error * 7 / 16
+                if x - 1 >= 0 and y + 1 < height:
+                    work[y + 1, x - 1] += error * 3 / 16
+                if y + 1 < height:
+                    work[y + 1, x] += error * 5 / 16
+                if x + 1 < width and y + 1 < height:
+                    work[y + 1, x + 1] += error * 1 / 16
+        return result
 
     def __repr__(self) -> str:
         return f"FloydSteinberg({self.palette.name})"
