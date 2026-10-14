@@ -259,8 +259,26 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
 
     The distance is the euclidean distance in RGB (the squared distance gives
     the same order). On a tie, the first one of the palette wins.
+
+    4 (a). Devuelve la fila de `colores` más cercana a `color`. - 
+    
+    `color`: una matriz (r, g, b). 
+    Puede ser uint8 o float, y en el paso 6 su Los valores pueden incluso ser inferiores a 0 o superiores a 255. - 
+    `colores`: la paleta, una matriz uint8 (n, 3). 
+    La distancia es la distancia euclidiana en RGB
+    (la distancia al cuadrado da el mismo orden). En empate gana el primero de la paleta
+
     """
-    raise StepNotImplemented(4, "nearest_color")
+
+    color = np.asarray(color, dtype=float)
+    colors = np.asarray(colors, dtype=float)
+
+    distances = np.sum((colors - color) ** 2, axis=1)
+
+    index = np.argmin(distances)
+
+    return colors[index].astype(np.uint8)
+    #raise StepNotImplemented(4, "nearest_color")
 
 
 class PaletteMap(Step):
@@ -279,7 +297,18 @@ class PaletteMap(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(4, "PaletteMap")
+        result = np.empty_like(image)
+
+        height, width = image.shape[:2]
+
+        for y in range(height):
+            for x in range(width):
+             result[y, x] = nearest_color(
+                    image[y, x],
+                    self.colors
+                )
+
+        return result
 
     def __repr__(self) -> str:
         return f"PaletteMap({self.palette.name})"
