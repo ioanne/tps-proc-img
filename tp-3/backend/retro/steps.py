@@ -23,6 +23,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar
 
 import numpy as np
+import cv2
 
 
 from retro.exceptions import StepNotImplemented
@@ -144,7 +145,8 @@ class Shrink(Step):
         return self.size, self.size
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(2, "Shrink")
+        h, w = image.shape[:2]
+        return cv2.resize(image, (self.size, self.size), interpolation=cv2.INTER_AREA)
 
     def __repr__(self) -> str:
         return f"Shrink({self.size})"
