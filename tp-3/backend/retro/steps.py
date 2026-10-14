@@ -26,6 +26,7 @@ import numpy as np
 
 from retro.exceptions import StepNotImplemented
 from retro.palettes import LUMA, Palette
+import cv2 as cv
 
 
 class Step(ABC):
@@ -62,6 +63,13 @@ class GradientMap(Step):
     still has many colors: rounding them to the palette is PaletteMap's job.
 
     Used only with monochrome palettes, right after Shrink.
+
+    Convierte la imagen en tonos de una paleta monocromática ("mapa de gradiente"). 
+    El negro pasa al color más oscuro de la paleta, el blanco al más claro y los grises 
+    intermedios se extienden por la rampa. Para la paleta de Game Boy a El gris medio se 
+    convierte en un color entre su segundo y tercer verde. El resultado Todavía tiene muchos 
+    colores: redondearlos a la paleta es tarea de PaletteMap. Se utiliza únicamente con
+      paletas monocromáticas, justo después de Shrink.
     """
 
     name = "gradient_map"
@@ -104,18 +112,41 @@ class SquareCrop(Step):
     The side of the square is the shorter side of the image. When the pixels
     left over cannot be split evenly, the extra one is cut on the right (or
     at the bottom).
+
+Paso 1. Mantiene el cuadrado centrado más grande de la imagen.
+El lado del cuadrado es el lado más corto de la imagen. Cuando los
+ píxeles lo que sobra no se puede dividir uniformemente, el extra se 
+ corta a la derecha (o en la parte inferior).
+
+
     """
 
     number = 1
     name = "square_crop"
     label = "Square crop"
+    image = cv.imread("tps-proc-img/tp-3/backend/retro/retrato.png")
+    window = np.array((512,512))
 
     def output_shape(self, height: int, width: int) -> tuple[int, int]:
+        
+        #height, width= image.shape[:2]      
         side = min(height, width)
         return side, side
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(1, "SquareCrop")
+        height, width= image.shape[:2] 
+
+        out_height, out_width = self.output_shape(height, width)
+
+        top = (height - out_height) // 2
+        left = (width - out_width) // 2
+
+        return image[
+            top:top + out_height,
+            left:left + out_width
+        ]
+
+        #raise StepNotImplemented(1, "SquareCrop")
 
 
 class Shrink(Step):

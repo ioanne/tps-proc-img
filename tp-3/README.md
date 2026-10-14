@@ -16,7 +16,6 @@ uvicorn app.main:app --reload --port 8765
 - Documentación de la API: http://localhost:8765/docs
 
 ## Línea de comandos
-
 ```bash
 cd backend
 python -m retro foto.jpg avatar.png --palette pico8 --pixels 64 --dithering --steps pasos/
