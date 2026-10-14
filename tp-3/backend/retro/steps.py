@@ -19,11 +19,12 @@ implemented it raises StepNotImplemented and the pipeline skips it, so the
 frontend works from minute one.
 """
 
+
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
 import numpy as np
-
+import cv2
 from retro.exceptions import StepNotImplemented
 from retro.palettes import LUMA, Palette
 
@@ -97,6 +98,9 @@ class GradientMap(Step):
 # TODO (team): steps 1 to 6
 # ===========================================================================
 
+#Define una nueva clase llamada SquareCrop que hereda de la clase base Step. 
+# Esto indica que este bloque de código es un "paso" estandarizado dentro del pipeline de procesamiento.
+
 class SquareCrop(Step):
     """
     Step 1. Keeps the largest centered square of the image.
@@ -105,17 +109,25 @@ class SquareCrop(Step):
     left over cannot be split evenly, the extra one is cut on the right (or
     at the bottom).
     """
+    ## Son atributos de clase fijos
+    number = 1 #Define que este es el primer paso del pipeline.
+    name = "square_crop" #El identificador técnico que usa el backend.
+    label = "Square crop" #El texto ue se muestra en el frontend
 
-    number = 1
-    name = "square_crop"
-    label = "Square crop"
-
-    def output_shape(self, height: int, width: int) -> tuple[int, int]:
-        side = min(height, width)
-        return side, side
-
+# Es el método principal del paso. Recibe la imagen original en formato de matriz NumPy (np.ndarray) 
+# y se compromete a devolver otra matriz NumPy ya procesada (-> np.ndarray
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(1, "SquareCrop")
+        height, width = image.shape[:2] #Extrae las dos primeras dimensiones de la forma (shape) de la matriz de la imagen, 
+        #guardándolas en las variables height (alto) y width (ancho). Se usa [:2] porque las imágenes a color tienen 3 dimensiones (alto, ancho, canales), pero para calcular el recorte solo nos interesan los ejes espaciales
+        side = min(height, width) # calcula la lonigutd
+        top = (height - side) // 2
+        left = (width - side) // 2 #Calcula el punto de inicio (el "desplazamiento" u offset) para centrar el recorte
+#Aplica el recorte sobre la matriz de NumPy
+        return image[top:top + side, left:left + side]
+#Define un método permite predecir qué dimensiones tendrá la imagen antes de ejecutar el procesamiento real, recibiendo el alto y ancho originales y devolviendo una tupla con las nuevas dimensiones.
+    def output_shape(self, height: int, width: int) -> tuple[int, int]:
+        side = min(height, width) #Vuelve a calcular el lado mínimo basándose en las dimensiones que entran y devuelve una tupla con dos valores iguales (side, side), confirmando que la salida siempre será un cuadrado
+        return side, side
 
 
 class Shrink(Step):
@@ -139,13 +151,14 @@ class Shrink(Step):
         return self.size, self.size
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(2, "Shrink")
-
+        return cv2.resize(image, (self.size, self.size), interpolation=cv2.INTER_AREA)
+# Recibe la imagen ya recortada como matriz NumPy y un parámetro opcional. Esta opción realiza una interpolación por área
     def __repr__(self) -> str:
         return f"Shrink({self.size})"
 
 
 class Enlarge(Step):
+    #agramos la imagen multiplicando sus dimensiones por un factor. Usamos al vecino más cercano para que cada píxel se expanda en un bloque cuadrado idéntico
     """
     Step 3. Enlarges the image `factor` times.
 
@@ -164,13 +177,15 @@ class Enlarge(Step):
         return height * self.factor, width * self.factor
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(3, "Enlarge")
+        height, width = image.shape[:2]
+        return cv2.resize(image, (width * self.factor, height * self.factor), interpolation=cv2.INTER_NEAREST)
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
 
 
 def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
+#Buscamos el color de la paleta mas parecido del píxel, despues seleccionamos el color de la paleta que dio menor distancia
     """
     Step 4 (a). Returns the row of `colors` closest to `color`.
 
@@ -181,10 +196,13 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
     The distance is the euclidean distance in RGB (the squared distance gives
     the same order). On a tie, the first one of the palette wins.
     """
-    raise StepNotImplemented(4, "nearest_color")
+    diff = colors.astype(float) - color.astype(float)
+    dist_sq = np.sum(diff ** 2, axis=1)
+    return colors[np.argmin(dist_sq)]
 
 
 class PaletteMap(Step):
+    #Transformamos la imagen para que solo use los colores de la paleta que se elija. Tambien se usa para hallar el color que mas se parezca y se reconstruya la img final
     """
     Step 4 (b). Replaces each pixel by the nearest color of the palette.
 
@@ -200,13 +218,21 @@ class PaletteMap(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(4, "PaletteMap")
+        # Convertir a float para evitar desbordamientos de uint8 en la resta
+        img_float = image.astype(float)
+        colors_float = self.colors.astype(float)
+        
+        diff = img_float[:, :, None, :] - colors_float[None, None, :, :]
+        dist_sq = np.sum(diff ** 2, axis=-1)
+        indices = np.argmin(dist_sq, axis=-1)
+        return self.colors[indices]
 
     def __repr__(self) -> str:
         return f"PaletteMap({self.palette.name})"
 
 
 class Frame(Step):
+    #Hacemos el marco para la imagen con el color mas oscuro de la paleta.
     """
     Step 5. Paints a frame of `thickness` pixels of `color` around the image.
 
@@ -223,13 +249,28 @@ class Frame(Step):
         self.thickness = thickness
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(5, "Frame")
+        if self.thickness <= 0:
+            return image.copy()
+        
+        result = image.copy()
+        h, w, _ = result.shape
+        t = self.thickness
+
+        # Pintar los bordes superior, inferior, izquierdo y derecho
+        result[:t, :] = self.color
+        result[h - t:, :] = self.color
+        result[:, :t] = self.color
+        result[:, w - t:] = self.color
+
+        return result
 
     def __repr__(self) -> str:
         return f"Frame({self.thickness})"
 
 
 class FloydSteinberg(Step):
+    #Aca logramos aplicar a la imagen que se utilicen mas colores con una paleta chica. Calculamos el color mas cercano y vemos la diferencia (pixel x pixel). 
+    
     """
     Step 6. Like PaletteMap, but spreading the error with Floyd–Steinberg dithering.
 
@@ -248,7 +289,28 @@ class FloydSteinberg(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(6, "FloydSteinberg")
+        img = image.astype(float)
+        h, w, _ = img.shape
+        result = np.empty_like(image)
+
+        for y in range(h):
+            for x in range(w):
+                old_pixel = img[y, x]
+                new_pixel = nearest_color(old_pixel, self.colors)
+                result[y, x] = new_pixel
+
+                error = old_pixel - new_pixel.astype(float)
+
+                if x + 1 < w:
+                    img[y, x + 1] += error * (7 / 16)
+                if y + 1 < h:
+                    if x > 0:
+                        img[y + 1, x - 1] += error * (3 / 16)
+                    img[y + 1, x] += error * (5 / 16)
+                    if x + 1 < w:
+                        img[y + 1, x + 1] += error * (1 / 16)
+
+        return result
 
     def __repr__(self) -> str:
         return f"FloydSteinberg({self.palette.name})"
