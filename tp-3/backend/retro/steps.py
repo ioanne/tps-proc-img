@@ -22,6 +22,7 @@ frontend works from minute one.
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
+import cv2
 import numpy as np
 
 from retro.exceptions import StepNotImplemented
@@ -115,8 +116,11 @@ class SquareCrop(Step):
         return side, side
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(1, "SquareCrop")
-
+        height, width = image.shape[:2]
+        side = min(height, width)
+        top = (height - side) // 2
+        left = (width - side) // 2
+        return image[top:top + side, left:left + side]
 
 class Shrink(Step):
     """
@@ -139,7 +143,8 @@ class Shrink(Step):
         return self.size, self.size
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(2, "Shrink")
+        
+        return cv2.resize(image, (self.size, self.size), interpolation=cv2.INTER_AREA)
 
     def __repr__(self) -> str:
         return f"Shrink({self.size})"
@@ -164,7 +169,7 @@ class Enlarge(Step):
         return height * self.factor, width * self.factor
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(3, "Enlarge")
+       return np.repeat(np.repeat(image, self.factor, axis=0), self.factor, axis=1)
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
@@ -181,7 +186,10 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
     The distance is the euclidean distance in RGB (the squared distance gives
     the same order). On a tie, the first one of the palette wins.
     """
-    raise StepNotImplemented(4, "nearest_color")
+    differences = colors.astype(float) - color
+    distances = (differences ** 2).sum(axis=1)
+    return colors[np.argmin(distances)]
+    
 
 
 class PaletteMap(Step):
@@ -200,7 +208,15 @@ class PaletteMap(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(4, "PaletteMap")
+
+        height, width = image.shape[:2]            
+        result = np.empty_like(image)              
+        for y in range(height):                    
+            for x in range(width):                 
+                 result[y, x] = nearest_color(image[y, x], self.colors)
+        return result                             
+
+        
 
     def __repr__(self) -> str:
         return f"PaletteMap({self.palette.name})"
@@ -223,7 +239,16 @@ class Frame(Step):
         self.thickness = thickness
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(5, "Frame")
+        if self.thickness == 0:
+            return image.copy()
+
+        result = image.copy()
+        result[:self.thickness, :, :] = self.color
+        result[-self.thickness:, :, :] = self.color
+        result[:, :self.thickness, :] = self.color
+        result[:, -self.thickness:, :] = self.color
+        return result
+   
 
     def __repr__(self) -> str:
         return f"Frame({self.thickness})"
@@ -248,7 +273,26 @@ class FloydSteinberg(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(6, "FloydSteinberg")
 
+        work = image.astype(float)                  
+        result = np.empty_like(image)               
+        height, width = image.shape[:2]             
+        
+        for y in range(height):                     
+            for x in range(width):                  
+                old = work[y, x].copy()            
+                new = nearest_color(old, self.colors)   
+                result[y, x] = new                  
+                error = old - new                  
+                if x + 1 < width:                  
+                    work[y, x + 1] += error * 7 / 16
+                if y + 1 < height:                  
+                    if x - 1 >= 0:                  
+                        work[y + 1, x - 1] += error * 3 / 16
+                    work[y + 1, x] += error * 5 / 16        
+                    if x + 1 < width:               
+                        work[y + 1, x + 1] += error * 1 / 16
+        return result                               
+        
     def __repr__(self) -> str:
         return f"FloydSteinberg({self.palette.name})"

@@ -50,5 +50,5 @@ Las de `frontend/samples/` son de dominio público, vía Wikimedia Commons:
 - `einstein.jpg`: Albert Einstein, foto de Orren Jack Turner (1947, copyright no renovado).
 
 ## Integrantes
-
-- _completar_
+Lauger Natera
+Matias Rodriguez
