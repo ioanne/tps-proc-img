@@ -1,4 +1,4 @@
-# TP 2 — Escáner de documentos
+[text](backend/requirements.txt)# TP 2 — Escáner de documentos
 
 La consigna completa está en [`enunciado.html`](enunciado.html) (abrilo en el navegador).
 
