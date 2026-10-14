@@ -248,7 +248,19 @@ class Frame(Step):
         self.thickness = thickness
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(5, "Frame")
+        #raise StepNotImplemented(5, "Frame")
+        if self.thickness <= 0:
+            return image.copy()
+
+        result = image.copy()
+        t = self.thickness
+
+        result[:t, :] = self.color    # Arriba
+        result[-t:, :] = self.color   # Abajo
+        result[:, :t] = self.color    # Izquierda
+        result[:, -t:] = self.color   # Derecha
+
+        return result
 
     def __repr__(self) -> str:
         return f"Frame({self.thickness})"
