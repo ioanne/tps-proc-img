@@ -156,6 +156,13 @@ class Shrink(Step):
     Each pixel of the result is the AVERAGE color of the block of the image it
     covers. If the side is not a multiple of `size`, the blocks may differ in
     one pixel.
+
+    Paso 2. Reduce la imagen (cuadrada) a píxeles `size` × `size`.
+
+    Cada píxel del resultado es el color PROMEDIO del bloque de la imagen
+    cubre. Si el lado no es múltiplo de `tamaño`, los bloques pueden diferir
+    un píxel.
+
     """
 
     number = 2
@@ -170,7 +177,28 @@ class Shrink(Step):
         return self.size, self.size
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(2, "Shrink")
+       
+        height, width = image.shape[:2]
+
+        result = np.zeros(
+            (self.size, self.size, image.shape[2]),
+            dtype=np.uint8
+        )
+
+        for y in range(self.size):
+            for x in range(self.size):
+                # limites
+                y_start = y * height // self.size
+                y_end = (y + 1) * height // self.size
+                x_start = x * width // self.size
+                x_end = (x + 1) * width // self.size
+
+                # promedio
+                block = image[y_start:y_end, x_start:x_end]
+                result[y, x] = np.mean(block, axis=(0, 1))
+
+        return result
+        #raise StepNotImplemented(2, "Shrink")
 
     def __repr__(self) -> str:
         return f"Shrink({self.size})"
@@ -195,7 +223,27 @@ class Enlarge(Step):
         return height * self.factor, width * self.factor
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(3, "Enlarge")
+        height, width = image.shape[:2]
+
+        out_height, out_width = self.output_shape(height, width)
+
+        result = np.zeros(
+            (out_height, out_width, image.shape[2]),
+            dtype=np.uint8
+        )
+
+        for y in range(height):
+            for x in range(width):
+                y_start = y * self.factor
+                y_end = (y + 1) * self.factor
+
+                x_start = x * self.factor
+                x_end = (x + 1) * self.factor
+
+                result[y_start:y_end, x_start:x_end] = image[y, x]
+
+        return result
+        #raise StepNotImplemented(3, "Enlarge")
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
