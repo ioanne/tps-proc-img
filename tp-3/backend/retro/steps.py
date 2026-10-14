@@ -120,8 +120,8 @@ class SquareCrop(Step):
 
     def apply(self, image: np.ndarray) -> np.ndarray:
         #raise StepNotImplemented(1, "SquareCrop")
-        height, width = image.shape[:2] #image.shape devuelve (alto, ancho, 3). Con el corte [:2] se obtienen únicamente las dimensiones espaciales para hacer las cuentas del recorte
-        side = min(height, width)  # Encuentra el lado mas pequeño
+        height, width = image.shape[:2] 
+        side = min(height, width)  
         top = (height - side) // 2 # Calcula cuántas filas se descartan en la parte superior
         left = (width - side) // 2 # Calcula cuántas columnas se descartan del lado izquierdo, si la cantidad sobrante es impar (por ejemplo 3), asigna 1 a la izquierda y deja 2 a la derecha, cumpliendo la regla de recortar el sobrante impar a la derecha
         return image[top : top + side, left : left + side] # Recorta y devuelve la porción central de la imagen con tamaño side × side
@@ -179,7 +179,7 @@ class Enlarge(Step):
     def apply(self, image: np.ndarray) -> np.ndarray:
         #raise StepNotImplemented(3, "Enlarge")
         expandir = np.repeat(image, self.factor, axis=1) # 1 representa columnas
-        return np.repeat(expandir, self.factor, axis=0) # 2 representa filas
+        return np.repeat(expandir, self.factor, axis=0) # 0 representa filas, NO IMPORTA EL ORDEN
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
@@ -198,9 +198,9 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
     """
     #raise StepNotImplemented(4, "nearest_color")
 
-    differences = colors.astype(float) - color.astype(float) # 1. Convertir a float antes de restar para evitar que uint8 desborde
-    distances = np.sum(differences**2, axis=1) # 2. Calcular la distancia al cuadrado d^2 sumando sobre los canales RGB (axis=1)
-    return colors[np.argmin(distances)] # 3. Devolver la fila de la paleta con la distancia mínima (en empate gana el primero)
+    differences = colors.astype(float) - color.astype(float) # Usar float antes de restar para evitar que uint8 desborde
+    distances = np.sum(differences**2, axis=1) # Calcular la distancia al cuadrado, sumando sobre los canales RGB (axis=1)
+    return colors[np.argmin(distances)] # Devolver la fila de la paleta con la distancia mínima 
              
 
 
@@ -285,7 +285,37 @@ class FloydSteinberg(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(6, "FloydSteinberg")
+        #raise StepNotImplemented(6, "FloydSteinberg")
+        work = image.astype(float)           # float para permitir números negativos o mayores a 255
+        result = np.empty_like(image)
+        height, width = image.shape[:2]
+
+        for y in range(height):
+            for x in range(width):
+                old = work[y, x]  # El píxel con el error acumulado
+                new = nearest_color(old, self.colors)  # Color más cercano de la paleta
+                result[y, x] = new
+                error = old - new.astype(float)  # Diferencia vectorial de error (R, G, B)
+
+                #  derecha (x + 1, y) -> 7/16
+                if x + 1 < width:
+                    work[y, x + 1] += error * 7 / 16
+
+                # Fila de abajo (y + 1)
+                if y + 1 < height:
+                    # 1: abajo-izquierda (x - 1, y + 1) -> 3/16
+                    # x - 1 >= 0 evita que x=-1 apunte a la última columna
+                    if x - 1 >= 0:
+                        work[y + 1, x - 1] += error * 3 / 16
+
+                    # 2: abajo (x, y + 1) -> 5/16
+                    work[y + 1, x] += error * 5 / 16
+
+                    # 3: abajo-derecha (x + 1, y + 1) -> 1/16
+                    if x + 1 < width:
+                        work[y + 1, x + 1] += error * 1 / 16
+
+        return result        
 
     def __repr__(self) -> str:
         return f"FloydSteinberg({self.palette.name})"

@@ -51,4 +51,5 @@ Las de `frontend/samples/` son de dominio público, vía Wikimedia Commons:
 
 ## Integrantes
 
-- _completar_
+- ALDANA SANDOVAL, BETZABE MAYRA
+- IKEMIYA, FACUNDO ROBERTINO
