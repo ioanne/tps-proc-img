@@ -20,7 +20,9 @@ frontend works from minute one.
 """
 
 from abc import ABC, abstractmethod
+from email.mime import image
 from typing import ClassVar
+from unittest import result
 
 import numpy as np
 import cv2
@@ -188,7 +190,12 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
     The distance is the euclidean distance in RGB (the squared distance gives
     the same order). On a tie, the first one of the palette wins.
     """
-    raise StepNotImplemented(4, "nearest_color")
+    
+    differences = colors.astype(float) - color.astype(float)
+    distances = np.sum(differences ** 2, axis=1)
+    return colors[np.argmin(distances)]
+
+    #raise StepNotImplemented(4, "nearest_color")
 
 
 class PaletteMap(Step):
@@ -207,7 +214,13 @@ class PaletteMap(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(4, "PaletteMap")
+        height, width = image.shape[:2]
+        result = np.empty_like(image)         # mismo tamaño y dtype, sin inicializar
+        for y in range(height):
+            for x in range(width):
+                result[y, x] = nearest_color(image[y, x], self.colors)
+        return result
+        #raise StepNotImplemented(4, "PaletteMap")
 
     def __repr__(self) -> str:
         return f"PaletteMap({self.palette.name})"
