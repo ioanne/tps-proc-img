@@ -24,6 +24,7 @@ from typing import ClassVar
 
 import numpy as np
 
+
 from retro.exceptions import StepNotImplemented
 from retro.palettes import LUMA, Palette
 
@@ -115,7 +116,11 @@ class SquareCrop(Step):
         return side, side
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(1, "SquareCrop")
+        height, width = image.shape[:2]
+        side = min(height, width)
+        top = (height - side) // 2             # filas que se cortan arriba
+        left = (width - side) // 2           # columnas que se cortan a la izquierda
+        return image[top : top + side, left : left + side]
 
 
 class Shrink(Step):
