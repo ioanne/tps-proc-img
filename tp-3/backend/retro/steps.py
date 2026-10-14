@@ -303,7 +303,7 @@ class PaletteMap(Step):
 
         for y in range(height):
             for x in range(width):
-             result[y, x] = nearest_color(
+                result[y, x] = nearest_color(
                     image[y, x],
                     self.colors
                 )
@@ -368,7 +368,31 @@ class FloydSteinberg(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(6, "FloydSteinberg")
+        result = image.astype(float).copy()
+        height, width = image.shape[:2]
+
+        for y in range(height):
+            for x in range(width):
+                old_color = result[y, x].copy()
+                new_color = nearest_color(old_color, self.colors)
+
+                result[y, x] = new_color
+                error = old_color - new_color
+
+                if x + 1 < width:
+                    result[y, x + 1] += error * 7 / 16
+
+                if y + 1 < height and x > 0:
+                    result[y + 1, x - 1] += error * 3 / 16
+
+                if y + 1 < height:
+                    result[y + 1, x] += error * 5 / 16
+
+                if y + 1 < height and x + 1 < width:
+                    result[y + 1, x + 1] += error * 1 / 16
+
+        return np.clip(np.rint(result), 0, 255).astype(np.uint8)
+
 
     def __repr__(self) -> str:
         return f"FloydSteinberg({self.palette.name})"
