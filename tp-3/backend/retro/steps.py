@@ -31,10 +31,13 @@ from retro.palettes import LUMA, Palette
 class Step(ABC):
     """A step of the pipeline. Given."""
 
-    number: ClassVar[int | None] = None  # step number in the assignment (None: given)
+    # step number in the assignment (None: given)
+    number: ClassVar[int | None] = None
     name: ClassVar[str]                  # id used by the API: "square_crop"
-    label: ClassVar[str]                 # name shown in the frontend: "Square crop"
-    essential: ClassVar[bool] = False    # if it is pending, the following steps cannot run
+    # name shown in the frontend: "Square crop"
+    label: ClassVar[str]
+    # if it is pending, the following steps cannot run
+    essential: ClassVar[bool] = False
 
     @abstractmethod
     def apply(self, image: np.ndarray) -> np.ndarray:
@@ -68,8 +71,10 @@ class GradientMap(Step):
     label = "Tone ramp"
 
     def __init__(self, palette: Palette, cutoff: float = 1.0) -> None:
-        self.colors = palette.colors.astype(float)  # (n, 3), from darkest to lightest
-        self.cutoff = cutoff                        # % of the darkest and lightest pixels to saturate
+        # (n, 3), from darkest to lightest
+        self.colors = palette.colors.astype(float)
+        # % of the darkest and lightest pixels to saturate
+        self.cutoff = cutoff
 
     def apply(self, image: np.ndarray) -> np.ndarray:
         # 1. Brightness of each pixel: (h, w, 3) @ (3,) → (h, w), float from 0 to 255.
@@ -78,13 +83,15 @@ class GradientMap(Step):
 
         # 2. Stretch the contrast: the darkest 1 % goes to 0 and the lightest 1 % to 255.
         low, high = np.percentile(gray, [self.cutoff, 100 - self.cutoff])
-        if high - low >= 1:  # a flat image is left as it is (and no division by zero)
+        # a flat image is left as it is (and no division by zero)
+        if high - low >= 1:
             gray = np.clip((gray - low) / (high - low) * 255, 0, 255)
 
         # 3. Map each gray to the ramp: n colors evenly spread from 0 to 255,
         #    interpolating linearly between them, one channel at a time.
         stops = np.linspace(0, 255, len(self.colors))
-        channels = [np.interp(gray, stops, self.colors[:, c]) for c in range(3)]
+        channels = [np.interp(gray, stops, self.colors[:, c])
+                    for c in range(3)]
 
         # 4. Back to an image: (h, w, 3), rounded and converted to uint8.
         return np.rint(np.stack(channels, axis=-1)).astype(np.uint8)
@@ -115,7 +122,11 @@ class SquareCrop(Step):
         return side, side
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(1, "SquareCrop")
+        height, width = image.shape[:2]
+        side = min(height, width)
+        top = (height - side) // 2
+        left = (width - side) // 2
+        return image[top:top + side, left:left + side].copy()
 
 
 class Shrink(Step):
@@ -139,7 +150,18 @@ class Shrink(Step):
         return self.size, self.size
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(2, "Shrink")
+        height, width = image.shape[:2]
+        result = np.empty((self.size, self.size, 3), dtype=np.uint8)
+        for y in range(self.size):
+            y0 = y * height // self.size
+            y1 = (y + 1) * height // self.size
+            for x in range(self.size):
+                x0 = x * width // self.size
+                x1 = (x + 1) * width // self.size
+                block = image[y0:y1, x0:x1].astype(float)
+                average = block.mean(axis=(0, 1))
+                result[y, x] = np.rint(average).astype(np.uint8)
+        return result
 
     def __repr__(self) -> str:
         return f"Shrink({self.size})"
@@ -152,7 +174,6 @@ class Enlarge(Step):
     Each pixel becomes a block of `factor` × `factor` pixels of exactly its
     color (nearest neighbor): no new colors appear.
     """
-
     number = 3
     name = "enlarge"
     label = "Enlarge"
@@ -164,7 +185,9 @@ class Enlarge(Step):
         return height * self.factor, width * self.factor
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(3, "Enlarge")
+        enlarged = np.repeat(image, self.factor, axis=0)
+        enlarged = np.repeat(enlarged, self.factor, axis=1)
+        return enlarged
 
     def __repr__(self) -> str:
         return f"Enlarge({self.factor})"
@@ -175,13 +198,15 @@ def nearest_color(color: np.ndarray, colors: np.ndarray) -> np.ndarray:
     Step 4 (a). Returns the row of `colors` closest to `color`.
 
     - `color`: an (r, g, b) array. It may be uint8 or float, and in step 6 its
-      values can even be below 0 or above 255.
+    values can even be below 0 or above 255.
     - `colors`: the palette, an (n, 3) uint8 array.
 
     The distance is the euclidean distance in RGB (the squared distance gives
     the same order). On a tie, the first one of the palette wins.
     """
-    raise StepNotImplemented(4, "nearest_color")
+    difference = color.astype(float) - colors.astype(float)
+    distances = np.sum(difference ** 2, axis=1)
+    return colors[np.argmin(distances)]
 
 
 class PaletteMap(Step):
@@ -200,7 +225,12 @@ class PaletteMap(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(4, "PaletteMap")
+        height, width = image.shape[:2]
+        result = np.empty_like(image)
+        for y in range(height):
+            for x in range(width):
+                result[y, x] = nearest_color(image[y, x], self.colors)
+        return result
 
     def __repr__(self) -> str:
         return f"PaletteMap({self.palette.name})"
@@ -223,7 +253,17 @@ class Frame(Step):
         self.thickness = thickness
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(5, "Frame")
+        result = image.copy()
+        t = self.thickness
+
+        if t == 0:
+            return result
+
+        result[:t, :] = self.color
+        result[-t:, :] = self.color
+        result[:, :t] = self.color
+        result[:, -t:] = self.color
+        return result
 
     def __repr__(self) -> str:
         return f"Frame({self.thickness})"
@@ -248,7 +288,27 @@ class FloydSteinberg(Step):
         self.colors = palette.colors  # (n, 3) uint8
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        raise StepNotImplemented(6, "FloydSteinberg")
+        work = image.astype(float).copy()
+        height, width = image.shape[:2]
+        result = np.empty_like(image)
+
+        for y in range(height):
+            for x in range(width):
+                old_color = work[y, x].copy()
+                new_color = nearest_color(old_color, self.colors)
+                result[y, x] = new_color
+                error = old_color - new_color.astype(float)
+
+                if x + 1 < width:
+                    work[y, x + 1] += error * (7 / 16)
+                if y + 1 < height and x > 0:
+                    work[y + 1, x - 1] += error * (3 / 16)
+                if y + 1 < height:
+                    work[y + 1, x] += error * (5 / 16)
+                if y + 1 < height and x + 1 < width:
+                    work[y + 1, x + 1] += error * (1 / 16)
+
+        return result
 
     def __repr__(self) -> str:
         return f"FloydSteinberg({self.palette.name})"
